@@ -33,7 +33,7 @@ function Forgot() {
     setErr(undefined);
     setBusy(true);
     const { error } = await supabase.auth.resetPasswordForEmail(r.data, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: `${window.location.origin}/auth-callback?type=recovery`,
     });
     setBusy(false);
     if (error) return toast.error(error.message);

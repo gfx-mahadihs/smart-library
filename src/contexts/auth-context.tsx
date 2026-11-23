@@ -25,13 +25,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
         router.invalidate();
-        if (event !== "SIGNED_OUT") qc.invalidateQueries();
+        if (event === "SIGNED_IN" || event === "USER_UPDATED") {
+          qc.invalidateQueries();
+        }
       }
     });
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("[auth] unable to restore session:", error.message);
+        }
+        setSession(data.session);
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error("[auth] unable to restore session:", error);
+        setSession(null);
+        setLoading(false);
+      });
     return () => sub.subscription.unsubscribe();
   }, [qc, router]);
 
@@ -44,7 +56,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signOut: async () => {
           await qc.cancelQueries();
           qc.clear();
-          await supabase.auth.signOut();
+          const { error } = await supabase.auth.signOut();
+          if (error) {
+            console.error("[auth] sign-out failed:", error.message);
+          }
+          setSession(null);
+          setLoading(false);
           await router.navigate({ to: "/login", replace: true });
         },
       }}

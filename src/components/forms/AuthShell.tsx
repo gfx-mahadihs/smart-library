@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
-import { lovable } from "@/integrations/lovable/index";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { showcaseCovers as c } from "@/lib/onboarding";
 
@@ -51,14 +51,16 @@ export function AuthShell({
   return (
     <div className="relative min-h-screen overflow-hidden bg-background">
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 aura-bg opacity-30 blur-3xl" />
-      <main className="relative mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-8 sm:px-6 sm:py-10">
-        <BookCollage compact={compact} />
-        <h1 className="title-xl mt-6 text-center sm:mt-8">
-          <span className="text-muted-foreground/70">{muted}</span>
-          <br />
-          {title}
-        </h1>
-        <div className="mt-6 sm:mt-8">{children}</div>
+      <main className="relative mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center px-4 py-8 sm:px-6 md:grid md:grid-cols-[minmax(0,0.9fr)_minmax(320px,0.75fr)] md:items-center md:gap-12 lg:gap-16 md:py-10">
+        <section className="min-w-0 text-center md:text-left">
+          <BookCollage compact={compact} />
+          <h1 className="title-xl mt-4 text-center sm:mt-6 md:mt-8">
+            <span className="text-muted-foreground/70">{muted}</span>
+            <br />
+            {title}
+          </h1>
+        </section>
+        <section className="mx-auto mt-5 w-full max-w-md md:mx-0 md:mt-0">{children}</section>
       </main>
     </div>
   );
@@ -71,10 +73,14 @@ export function GoogleButton({ label = "Continue with Google" }: { label?: strin
       variant="soft"
       size="xl"
       onClick={async () => {
-        const res = await lovable.auth.signInWithOAuth("google", {
-          redirect_uri: window.location.origin,
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: "google",
+          options: {
+            redirectTo: `${window.location.origin}/auth-callback`,
+            queryParams: { access_type: "offline", prompt: "consent" },
+          },
         });
-        if (res.error) toast.error(res.error.message ?? "Google sign-in failed");
+        if (error) toast.error(error.message ?? "Google sign-in failed");
       }}
     >
       <svg viewBox="0 0 24 24" className="!size-5" aria-hidden>

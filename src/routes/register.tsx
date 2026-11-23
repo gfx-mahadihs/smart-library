@@ -90,7 +90,7 @@ function Register() {
     }
     setErrors({});
     setBusy(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: result.data.email,
       password: result.data.password,
       options: {
@@ -110,7 +110,11 @@ function Register() {
       }
       return;
     }
-    // Confirm-email is enabled by the dashboard; never treat signUp as a verified login.
+    // Supabase may return a session if email confirmation is temporarily disabled.
+    // Clear it here so registration never bypasses the confirmation requirement.
+    if (data.session) {
+      await supabase.auth.signOut();
+    }
     sessionStorage.setItem("library_verification_email", result.data.email);
     setSentTo(result.data.email);
     setResendSeconds(60);

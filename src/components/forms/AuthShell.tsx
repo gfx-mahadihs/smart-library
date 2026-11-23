@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
-import { lovable } from "@/integrations/lovable";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { showcaseCovers as c } from "@/lib/onboarding";
 
@@ -73,11 +73,22 @@ export function GoogleButton({ label = "Continue with Google" }: { label?: strin
       variant="soft"
       size="xl"
       onClick={async () => {
-        const result = await lovable.auth.signInWithOAuth("google", {
-          redirect_uri: `${window.location.origin}/auth-callback`,
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: "google",
+          options: {
+            redirectTo: `${window.location.origin}/auth-callback`,
+            queryParams: {
+              access_type: "offline",
+              prompt: "select_account",
+            },
+          },
         });
-        if (!result.redirected && result.error) {
-          toast.error(result.error.message ?? "Google sign-in failed");
+        if (error) {
+          toast.error(
+            error.message === "Unsupported provider: missing OAuth secret"
+              ? "Google sign-in is not configured in Supabase yet."
+              : (error.message ?? "Google sign-in failed"),
+          );
         }
       }}
     >

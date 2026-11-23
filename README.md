@@ -237,16 +237,28 @@ Include a clear description, steps to reproduce the problem, and relevant screen
 
 Apply database migrations `0011` through `0013` to the Supabase project. Enable `pg_cron` if the due-reminder schedule is required.
 
-| Environment variable | Purpose |
-| --- | --- |
-| `VITE_SUPABASE_URL` | Browser Supabase project URL |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | Browser publishable key |
-| `SUPABASE_URL` | Server-side Supabase URL |
-| `SUPABASE_PUBLISHABLE_KEY` | Server-side publishable key |
-| `VITE_BACKEND_TYPE` | Set to `cpp` to use the C++ HTTP adapter |
-| `CPP_API_TOKEN` | Optional C++ bearer-token check |
-| `RESEND_API_KEY` | Optional Resend email provider key |
-| `EMAIL_FROM` | Optional verified sender identity |
+| Environment variable             | Purpose                                    |
+| -------------------------------- | ------------------------------------------ |
+| `VITE_SUPABASE_URL`              | Browser Supabase project URL               |
+| `VITE_SUPABASE_PUBLISHABLE_KEY`  | Browser publishable key                    |
+| `SUPABASE_URL`                   | Server-side Supabase URL                   |
+| `SUPABASE_PUBLISHABLE_KEY`       | Server-side publishable key                |
+| `VITE_BACKEND_TYPE`              | Set to `cpp` to use the C++ HTTP adapter   |
+| `CPP_API_TOKEN`                  | Optional C++ bearer-token check            |
+| `RESEND_API_KEY`                 | Optional Resend email provider key         |
+| `EMAIL_FROM`                     | Optional verified sender identity          |
+| `SUPABASE_AUTH_GOOGLE_CLIENT_ID` | Google OAuth Web application client ID     |
+| `SUPABASE_AUTH_GOOGLE_SECRET`    | Google OAuth Web application client secret |
+
+### Google authentication setup
+
+1. Create a Google OAuth 2.0 Web application in Google Cloud.
+2. Add `https://<project-ref>.supabase.co/auth/v1/callback` as an authorized redirect URI.
+3. In Supabase Authentication > Providers, enable Google and enter the Google client ID and secret.
+4. Add this application callback to Supabase Authentication > URL Configuration:
+   - `https://<your-site-domain>/auth-callback`
+   - `http://localhost:8080/auth-callback` for local development
+5. Set `SUPABASE_AUTH_GOOGLE_CLIENT_ID` and `SUPABASE_AUTH_GOOGLE_SECRET` when deploying local Supabase CLI configuration.
 
 The C++ backend supports renew, waitlist, review, catalogue, profile, reservation, and reports adapter endpoints. Build and run it with CMake:
 

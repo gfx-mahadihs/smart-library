@@ -18,8 +18,21 @@ function AuthCallback() {
   useEffect(() => {
     const url = new URL(window.location.href);
     const recovery = url.searchParams.get("type") === "recovery";
+    const code = url.searchParams.get("code");
     let cancelled = false;
     let attempts = 0;
+
+    const exchangeCode = async () => {
+      if (!code) return true;
+      const existing = await supabase.auth.getSession();
+      if (existing.data.session) return true;
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      if (error) {
+        console.error("[auth-callback] OAuth code exchange failed:", error.message);
+        return false;
+      }
+      return true;
+    };
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled) return;
@@ -45,7 +58,13 @@ function AuthCallback() {
       navigate({ to: recovery ? "/reset-password" : "/dashboard", replace: true });
     };
 
-    void finish();
+    void exchangeCode().then((exchanged) => {
+      if (!exchanged) {
+        navigate({ to: "/login", replace: true });
+        return;
+      }
+      void finish();
+    });
     const fallback = window.setTimeout(() => void finish(), 2500);
     const finalFallback = window.setTimeout(() => void finish(), 5000);
 

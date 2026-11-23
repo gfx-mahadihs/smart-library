@@ -90,16 +90,13 @@ function Register() {
 
   if (sent)
     return (
-      <AuthShell muted="Almost there" title="Check your inbox" compact>
+      <AuthShell muted="Verify with" title="Google" compact>
         <p className="text-center text-sm text-muted-foreground">
-          We sent a confirmation link to <b className="text-foreground">{form.email}</b>. Open it to
-          activate your account.
+          Use your Gmail or Google account to verify and finish creating your library account.
+          Email-link verification is no longer required.
         </p>
         <div className="mt-4 space-y-3">
-          <p className="text-center text-xs text-muted-foreground">
-            Or verify instantly — sign in with Google:
-          </p>
-          <GoogleButton label="Verify with Google" />
+          <GoogleButton label="Continue with Google" />
         </div>
         <Button asChild variant="soft" size="xl" className="mt-3">
           <Link to="/login">Back to log in</Link>

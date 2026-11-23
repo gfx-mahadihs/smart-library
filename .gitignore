@@ -33,5 +33,8 @@ dist-ssr
 *.sw?
 
 .vercel
+.env
+.env.*
+!.env.example
 server_cpp/library_server.exe
 server_cpp/library_store.json

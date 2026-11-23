@@ -73,6 +73,43 @@ export function CirculationDesk({ canManageRules = false }: { canManageRules?: b
             value={barcode}
             onChange={(e) => setBarcode(e.target.value)}
           />
+          <Button
+            type="button"
+            variant="soft"
+            size="pill"
+            onClick={async () => {
+              const detectorApi = (
+                window as typeof window & {
+                  BarcodeDetector?: new (options?: { formats: string[] }) => {
+                    detect: (source: CanvasImageSource) => Promise<Array<{ rawValue: string }>>;
+                  };
+                }
+              ).BarcodeDetector;
+              if (!detectorApi) {
+                toast.info(
+                  "Camera barcode scanning is not supported here. Use the manual or USB scanner field.",
+                );
+                return;
+              }
+              try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                  video: { facingMode: "environment" },
+                });
+                const video = document.createElement("video");
+                video.srcObject = stream;
+                await video.play();
+                const detector = new detectorApi({ formats: ["code_128", "ean_13", "qr_code"] });
+                const result = await detector.detect(video);
+                stream.getTracks().forEach((track) => track.stop());
+                if (result[0]?.rawValue) setBarcode(result[0].rawValue);
+                else toast.info("No barcode detected");
+              } catch (error) {
+                toast.error((error as Error).message);
+              }
+            }}
+          >
+            Scan camera
+          </Button>
           <Button variant="hero" size="pill" disabled={checkout.isPending}>
             Check out
           </Button>
@@ -207,6 +244,24 @@ function FinesDesk() {
               <b>{f.amount}</b>
               <Button size="sm" variant="soft" onClick={() => pay.mutate(f.id)}>
                 Paid
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  const reason = window.prompt("Reason for waiving this fine:");
+                  if (reason?.trim()) {
+                    library
+                      .waiveFine(f.id, reason.trim())
+                      .then(() => {
+                        toast.success("Fine waived");
+                        refresh();
+                      })
+                      .catch((error) => toast.error((error as Error).message));
+                  }
+                }}
+              >
+                Waive
               </Button>
             </li>
           ))}

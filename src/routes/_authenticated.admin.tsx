@@ -29,6 +29,8 @@ function AdminLayout() {
     { to: "/admin/users", label: "Members", show: access.admin },
     { to: "/admin/circulation", label: "Circulation", show: true },
     { to: "/admin/super-admin", label: "Super admin", show: access.superAdmin },
+    { to: "/admin/notices", label: "Notices", show: access.admin },
+    { to: "/admin/reports", label: "Reports", show: access.admin },
   ] as const;
   return (
     <div className="min-h-screen bg-background">

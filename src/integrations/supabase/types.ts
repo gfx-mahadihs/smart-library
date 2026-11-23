@@ -408,6 +408,7 @@ export type Database = {
           notify_due_dates: boolean;
           notify_email: boolean;
           semester: string | null;
+          student_id: string | null;
           university_id: string | null;
           updated_at: string;
         };
@@ -422,6 +423,7 @@ export type Database = {
           notify_due_dates?: boolean;
           notify_email?: boolean;
           semester?: string | null;
+          student_id?: string | null;
           university_id?: string | null;
           updated_at?: string;
         };
@@ -436,6 +438,7 @@ export type Database = {
           notify_due_dates?: boolean;
           notify_email?: boolean;
           semester?: string | null;
+          student_id?: string | null;
           university_id?: string | null;
           updated_at?: string;
         };

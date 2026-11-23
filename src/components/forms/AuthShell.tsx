@@ -1,8 +1,7 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
 import { showcaseCovers as c } from "@/lib/onboarding";
 
@@ -68,38 +67,24 @@ export function AuthShell({
 }
 
 export function GoogleButton({ label = "Continue with Google" }: { label?: string }) {
+  const [loading, setLoading] = useState(false);
   return (
     <Button
       type="button"
       variant="soft"
       size="xl"
+      disabled={loading}
       onClick={async () => {
+        setLoading(true);
         const { error } = await supabase.auth.signInWithOAuth({
           provider: "google",
           options: {
             redirectTo: `${window.location.origin}/auth-callback`,
-            queryParams: {
-              access_type: "offline",
-              prompt: "select_account",
-            },
           },
         });
         if (error) {
-          if (
-            error.message.includes("missing OAuth secret") ||
-            error.message.includes("Unsupported provider")
-          ) {
-            const result = await lovable.auth.signInWithOAuth("google", {
-              redirect_uri: `${window.location.origin}/auth-callback`,
-            });
-            if (!result.redirected && result.error) {
-              toast.error(
-                "Google sign-in needs configuration. Enable Google in Supabase and add the Google OAuth client ID and secret.",
-              );
-            }
-            return;
-          }
-          toast.error(error.message ?? "Google sign-in failed");
+          setLoading(false);
+          toast.error("Google sign-in is not available right now. Please use email.");
         }
       }}
     >
@@ -118,7 +103,7 @@ export function GoogleButton({ label = "Continue with Google" }: { label?: strin
           d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.1-3.1A11 11 0 0 0 2.2 7.3l3.6 2.8C6.7 7.4 9.1 5.4 12 5.4z"
         />
       </svg>
-      {label}
+      {loading ? "Connecting…" : label}
     </Button>
   );
 }

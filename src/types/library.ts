@@ -94,6 +94,7 @@ export interface Profile {
   fullName: string;
   email: string | null;
   universityId: string | null;
+  studentId: string | null;
   department: string | null;
   semester: string | null;
   avatarUrl: string | null;

@@ -17,6 +17,9 @@ function AuthedLayout() {
       </div>
     );
   if (!user) return <Navigate to="/login" replace />;
+  if (!user.email_confirmed_at && !user.confirmed_at) {
+    return <Navigate to="/login" search={{ verify: "1" }} replace />;
+  }
   return (
     <AppLayout>
       <Outlet />

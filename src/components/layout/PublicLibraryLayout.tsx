@@ -39,6 +39,12 @@ export function PublicLibraryLayout({
               <Link to="/login" className="transition-opacity hover:opacity-50">
                 Login
               </Link>
+              <Link
+                to="/register"
+                className="rounded-full border border-current px-2 py-1 font-semibold"
+              >
+                Sign up
+              </Link>
             </nav>
           </div>
         </header>
@@ -58,6 +64,9 @@ export function PublicLibraryLayout({
               <Link to="/explore">Explore</Link>
             </Button>
             <ThemeToggle />
+            <Button asChild variant="soft" size="sm">
+              <Link to="/register">Sign up</Link>
+            </Button>
             <Button asChild size="sm">
               <Link to="/login">
                 <LogIn className="size-4" />

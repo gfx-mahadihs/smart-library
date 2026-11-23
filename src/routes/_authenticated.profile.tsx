@@ -37,6 +37,11 @@ export const Route = createFileRoute("/_authenticated/profile")({
 const schema = z.object({
   fullName: z.string().trim().min(2, "Enter your full name").max(120),
   universityId: z.string().trim().max(40),
+  studentId: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9-]*$/, "Use letters, numbers and dashes only")
+    .max(40),
   department: z.string().trim().max(80),
   semester: z.string().trim().max(20),
 });
@@ -92,6 +97,7 @@ function ProfilePage() {
   const [form, setForm] = useState({
     fullName: "",
     universityId: "",
+    studentId: "",
     department: "",
     semester: "",
   });
@@ -103,6 +109,7 @@ function ProfilePage() {
       setForm({
         fullName: profile.fullName,
         universityId: profile.universityId ?? "",
+        studentId: profile.studentId ?? "",
         department: profile.department ?? "",
         semester: profile.semester ?? "",
       });
@@ -193,6 +200,11 @@ function ProfilePage() {
         </div>
         <form onSubmit={save} noValidate className="space-y-4 rounded-3xl bg-card p-6 shadow-soft">
           <h2 className="text-lg font-extrabold tracking-tight">Personal information</h2>
+          {!profile.studentId && (
+            <div className="rounded-2xl bg-primary-soft p-3 text-sm text-primary">
+              Complete your profile by adding your student ID.
+            </div>
+          )}
           <Field id="fullName" label="Full name" error={errors.fullName}>
             <input
               id="fullName"
@@ -203,6 +215,15 @@ function ProfilePage() {
           </Field>
           <Field id="email" label="Email (managed by your account)">
             <input id="email" className={inputCls} value={profile.email ?? ""} disabled />
+          </Field>
+          <Field id="studentId" label="Student ID" error={errors.studentId}>
+            <input
+              id="studentId"
+              className={inputCls}
+              value={form.studentId}
+              onChange={(e) => setForm({ ...form, studentId: e.target.value })}
+              placeholder="2026-1-60-001"
+            />
           </Field>
           <Field id="universityId" label="University ID" error={errors.universityId}>
             <input

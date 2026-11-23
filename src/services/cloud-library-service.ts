@@ -190,6 +190,7 @@ export const cloudLibraryService: LibraryService = {
       fullName: profile.full_name,
       email: profile.email,
       universityId: profile.university_id,
+      studentId: profile.student_id ?? null,
       department: profile.department,
       semester: profile.semester,
       avatarUrl: profile.avatar_url,
@@ -206,6 +207,7 @@ export const cloudLibraryService: LibraryService = {
     const patch: any = {};
     if (p.fullName !== undefined) patch.full_name = p.fullName;
     if (p.universityId !== undefined) patch.university_id = p.universityId || null;
+    if (p.studentId !== undefined) patch.student_id = p.studentId || null;
     if (p.department !== undefined) patch.department = p.department || null;
     if (p.semester !== undefined) patch.semester = p.semester || null;
     if (p.avatarUrl !== undefined) patch.avatar_url = p.avatarUrl;

@@ -1,0 +1,15 @@
+import { cn } from "@/lib/utils";
+
+export function Logo({ compact, className }: { compact?: boolean; className?: string }) {
+  return (
+    <span className={cn("inline-flex items-center gap-2 select-none", className)}>
+      <span className="relative grid size-9 shrink-0 place-items-center rounded-full bg-ink">
+        <span className="h-4 w-1 -rotate-12 rounded-sm bg-lime" />
+        <span className="ml-0.5 h-4 w-1 rotate-6 rounded-sm bg-primary-foreground" />
+      </span>
+      {!compact && (
+        <span className="truncate text-base font-extrabold tracking-tight">গ্রন্থাগার</span>
+      )}
+    </span>
+  );
+}

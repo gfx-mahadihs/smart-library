@@ -1,0 +1,4 @@
+DROP POLICY "members read book authors" ON public.book_authors;
+CREATE POLICY "members read book authors" ON public.book_authors FOR SELECT TO authenticated USING (EXISTS (SELECT 1 FROM public.books b WHERE b.id = book_authors.book_id) AND EXISTS (SELECT 1 FROM public.authors a WHERE a.id = book_authors.author_id));
+COMMENT ON POLICY "members read book authors" ON public.book_authors IS 'Read links only for books and authors visible under their own row-level policies; author_id identifies a catalogue author, not an auth user.';
+DROP POLICY "Public view published book covers" ON storage.objects;

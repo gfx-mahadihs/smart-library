@@ -1,0 +1,83 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1792252495715,
+      "tag": "0000_migration",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792255175683,
+      "tag": "0001_circulation_functions",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792390736973,
+      "tag": "0002_super_admin_role",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792390825807,
+      "tag": "0003_secure_management",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792551601310,
+      "tag": "0004_lock_role_table_writes",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792819918694,
+      "tag": "0005_secure_book_cover_uploads",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792820012459,
+      "tag": "0006_rename_library_welcome",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792904339689,
+      "tag": "0007_restrict_catalogue_and_copies",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794289080527,
+      "tag": "0008_public_read_only_library",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794289274886,
+      "tag": "0009_restrict_anonymous_catalogue_grants",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794816705617,
+      "tag": "0010_scope_member_author_links_and_remove_public_storage_reads",
+      "breakpoints": true
+    }
+  ]
+}

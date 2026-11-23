@@ -22,3 +22,7 @@
 - Public catalogue reads use the publishable-key server function through LibraryService; public routes reuse catalogue/detail views and never load private member data while signed out. Why: supports SSR without bypassing RLS or changing the C++ adapter boundary.
 - Both public catalogue entry routes share search validation and query-reset retries; search inputs read URL state directly. Why: prevents filter navigation from erasing search and retries from reloading a failed SSR page.
 - Visitors resolve private book covers through a server function that verifies the exact stored reference through anonymous catalogue RLS before signing for five minutes; never grant anonymous storage reads. Why: blocks direct storage listing and signing of unpublished files while preserving public covers.
+
+- New retention and engagement tables require RLS, authenticated least-privilege grants, and security-definer RPCs for renewals, waitlists, reviews, and staff waivers. Why: member-specific state and library rules must be enforced at the database boundary.
+- Long-lived feature rules belong in numbered migrations and in LibraryService adapters, with C++ returning graceful fallbacks when an endpoint is unavailable. Why: keeps deployments reversible and prevents UI/backend drift.
+- Public notice, review, recommendation, and catalogue surfaces are cache-safe while member mutations remain session-bound. Why: preserves SSR/public browsing and prevents anonymous data access.

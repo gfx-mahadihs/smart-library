@@ -233,6 +233,31 @@ If you find a bug or have an idea for improvement, open an issue in the GitHub r
 
 Include a clear description, steps to reproduce the problem, and relevant screenshots or error messages when available.
 
+## Library Upgrade Configuration
+
+Apply database migrations `0011` through `0013` to the Supabase project. Enable `pg_cron` if the due-reminder schedule is required.
+
+| Environment variable | Purpose |
+| --- | --- |
+| `VITE_SUPABASE_URL` | Browser Supabase project URL |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Browser publishable key |
+| `SUPABASE_URL` | Server-side Supabase URL |
+| `SUPABASE_PUBLISHABLE_KEY` | Server-side publishable key |
+| `VITE_BACKEND_TYPE` | Set to `cpp` to use the C++ HTTP adapter |
+| `CPP_API_TOKEN` | Optional C++ bearer-token check |
+| `RESEND_API_KEY` | Optional Resend email provider key |
+| `EMAIL_FROM` | Optional verified sender identity |
+
+The C++ backend supports renew, waitlist, review, catalogue, profile, reservation, and reports adapter endpoints. Build and run it with CMake:
+
+```bash
+cmake -S server_cpp -B server_cpp/build
+cmake --build server_cpp/build
+CPP_API_TOKEN=local-token server_cpp/build/granthagar_server 5000
+```
+
+On Windows, use `cmake --build server_cpp/build --config Release` and run the generated executable.
+
 ## 📄 License
 
 Refer to the repository's [`LICENSE`](LICENSE) file for the applicable license terms. Ensure the license badge matches the actual license.

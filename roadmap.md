@@ -11,3 +11,20 @@
 - [x] Verify admin editing, sign-out denial, admin-to-owner denial, and database security configuration.
 - [x] Assign initial super admin (nv.tuhin@gmail.com) and verify role state.
 - [x] Verify super-admin access in the preview signed in as nv.tuhin@gmail.com (members list + audit history load, no page errors).
+
+## Library upgrade
+- [x] Due-date reminder RPC and notification preferences
+- [x] Renew-loan RPC and borrowed-loan UI
+- [x] Waitlist tables, RPCs, and return-time notification trigger
+- [x] Review and rating RPC/RLS
+- [x] Recommendation RPC and dashboard fallback
+- [x] Reading lists
+- [x] Library notices and admin CRUD
+- [x] PWA manifest, icons, offline fallback, and install prompt
+- [x] Bengali/English locale preference and adjustable text size
+- [x] Reports RPC, charts, CSV, and print/PDF summary
+- [x] Camera/USB/manual circulation entry enhancements
+- [x] C++ persistence, cross-platform sockets, CMake, auth header, CORS, and upgrade endpoints
+- [ ] Email cron delivery through an external provider (provider abstraction ready)
+- [ ] Full reading-list public share route
+- [ ] Full production QR/camera lifecycle test

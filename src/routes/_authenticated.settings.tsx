@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { qk, useProfile } from "@/hooks/use-library";
 import { library } from "@/services";
 import type { Profile } from "@/types/library";
+import { setLocale, type Locale } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -86,15 +87,36 @@ function SettingsPage() {
           <select
             aria-label="Language"
             value={p.language}
-            onChange={(e) => patch({ language: e.target.value })}
+            onChange={(e) => {
+              const locale = e.target.value as Locale;
+              setLocale(locale);
+              void patch({ language: locale });
+            }}
             className="h-11 w-full rounded-2xl border bg-card px-3 text-sm outline-none focus:border-primary"
           >
             <option value="en">English</option>
             <option value="bn">বাংলা (Bangla)</option>
           </select>
           <p className="mt-2 text-xs text-muted-foreground">
-            Saved to your profile. Interface translations are coming later.
+            Saved to your profile and used by the interface.
           </p>
+        </section>
+        <section className={card}>
+          <h2 className="mb-4 font-extrabold">Text size</h2>
+          <select
+            aria-label="Text size"
+            value={p.textSize}
+            onChange={(e) => {
+              const value = e.target.value as "small" | "normal" | "large";
+              patch({ textSize: value });
+              document.documentElement.dataset.textSize = value;
+            }}
+            className="h-11 w-full rounded-2xl border bg-card px-3 text-sm outline-none focus:border-primary"
+          >
+            <option value="small">Small</option>
+            <option value="normal">Normal</option>
+            <option value="large">Large</option>
+          </select>
         </section>
         <Button
           variant="soft"

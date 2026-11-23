@@ -100,6 +100,8 @@ export interface Profile {
   language: string;
   notifyEmail: boolean;
   notifyDueDates: boolean;
+  onboardingComplete: boolean;
+  textSize: "small" | "normal" | "large";
 }
 
 export interface Reservation {
@@ -118,6 +120,7 @@ export interface BorrowRecord {
   status: BorrowStatus;
   barcode: string;
   book: Book;
+  renewalCount: number;
 }
 
 export interface Fine {
@@ -144,6 +147,10 @@ export interface LibrarySettings {
   finePerDay: number;
   maxActiveReservations: number;
   currency: string;
+  maxRenewals: number;
+  renewDays: number;
+  reservationHoldHours: number;
+  fineCapPerLoan: number;
 }
 
 export interface AdminMetrics {
@@ -169,4 +176,57 @@ export interface StaffFine {
   amount: number;
   overdueDays: number;
   memberEmail: string | null;
+}
+
+export interface RenewLoanResult {
+  dueAt: string;
+  renewalCount: number;
+}
+
+export interface WaitlistEntry {
+  id: string;
+  position: number;
+  status: "waiting" | "notified" | "expired" | "cancelled";
+  holdExpiresAt: string | null;
+}
+
+export interface BookReview {
+  id: string;
+  bookId: string;
+  userId: string;
+  rating: number;
+  body: string;
+  hidden: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReadingList {
+  id: string;
+  name: string;
+  publicSlug: string | null;
+  createdAt: string;
+  books: Book[];
+}
+
+export interface ReadingStats {
+  booksRead: number;
+  readingStreak: number;
+  badges: Array<{ key: "first_borrow" | "five_books" | "on_time"; earned: boolean }>;
+}
+
+export interface LibraryNotice {
+  id: string;
+  title: string;
+  body: string;
+  eventAt: string | null;
+  pinned: boolean;
+  createdAt: string;
+}
+
+export interface AdminReport {
+  mostBorrowed: Array<{ title: string; borrowCount: number }>;
+  byDepartment: Array<{ department: string; borrowCount: number }>;
+  overdue: Array<{ id: string; title: string; fullName: string; email: string; dueAt: string }>;
+  finesCollected: number;
 }

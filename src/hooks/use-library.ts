@@ -18,6 +18,12 @@ export const qk = {
   fines: (u?: string) => ["fines", u] as const,
   notifications: (u?: string) => ["notifications", u] as const,
   settings: ["settings"] as const,
+  waitlist: (u?: string, bookId?: string) => ["waitlist", u, bookId] as const,
+  reviews: (bookId?: string) => ["reviews", bookId] as const,
+  recommendations: (u?: string) => ["recommendations", u] as const,
+  readingStats: (u?: string) => ["readingStats", u] as const,
+  readingLists: (u?: string) => ["readingLists", u] as const,
+  notices: ["notices"] as const,
 };
 
 export const useCategories = () =>
@@ -169,5 +175,135 @@ export function useMarkRead() {
     mutationFn: (ids?: string[]) => library.markNotificationsRead(ids),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
     onError: (e) => toast.error((e as Error).message),
+  });
+}
+
+export function useRenewLoan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (borrowId: string) => library.renewLoan(borrowId),
+    onSuccess: (result) => {
+      toast.success("Loan renewed", {
+        description: `New due date: ${new Date(result.dueAt).toLocaleDateString()}`,
+      });
+      qc.invalidateQueries({ queryKey: ["borrows"] });
+      qc.invalidateQueries({ queryKey: ["reservations"] });
+    },
+    onError: (error) => toast.error((error as Error).message),
+  });
+}
+
+export function useJoinWaitlist() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (bookId: string) => library.joinWaitlist(bookId),
+    onSuccess: (entry) => {
+      toast.success("Joined waitlist", {
+        description: `Your position is ${entry.position}.`,
+      });
+      qc.invalidateQueries({ queryKey: ["waitlist"] });
+    },
+    onError: (error) => toast.error((error as Error).message),
+  });
+}
+
+export function useLeaveWaitlist() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (bookId: string) => library.leaveWaitlist(bookId),
+    onSuccess: () => {
+      toast.success("Left waitlist");
+      qc.invalidateQueries({ queryKey: ["waitlist"] });
+    },
+    onError: (error) => toast.error((error as Error).message),
+  });
+}
+
+export function useWaitlist(bookId: string) {
+  const uid = useUid();
+  return useQuery({
+    queryKey: qk.waitlist(uid, bookId),
+    queryFn: () => library.listWaitlist(bookId),
+    enabled: !!uid && !!bookId,
+  });
+}
+
+export function useReviews(bookId: string) {
+  return useQuery({
+    queryKey: qk.reviews(bookId),
+    queryFn: () => library.listReviews(bookId),
+  });
+}
+
+export function useSaveReview() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ bookId, rating, body }: { bookId: string; rating: number; body: string }) =>
+      library.saveReview(bookId, rating, body),
+    onSuccess: (_id, value) => {
+      toast.success("Review saved");
+      qc.invalidateQueries({ queryKey: qk.reviews(value.bookId) });
+    },
+    onError: (error) => toast.error((error as Error).message),
+  });
+}
+
+export function useDeleteReview() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (bookId: string) => library.deleteReview(bookId),
+    onSuccess: (_id, bookId) => {
+      toast.success("Review deleted");
+      qc.invalidateQueries({ queryKey: qk.reviews(bookId) });
+    },
+    onError: (error) => toast.error((error as Error).message),
+  });
+}
+
+export function useRecommendations() {
+  const uid = useUid();
+  return useQuery({
+    queryKey: qk.recommendations(uid),
+    queryFn: () => library.recommendBooks(12),
+    enabled: !!uid,
+  });
+}
+
+export function useReadingStats() {
+  const uid = useUid();
+  return useQuery({
+    queryKey: qk.readingStats(uid),
+    queryFn: () => library.readingStats(),
+    enabled: !!uid,
+  });
+}
+
+export function useNotices() {
+  return useQuery({
+    queryKey: qk.notices,
+    queryFn: () => library.listNotices(),
+  });
+}
+
+export function useReadingLists() {
+  const uid = useUid();
+  return useQuery({
+    queryKey: qk.readingLists(uid),
+    queryFn: () => library.listReadingLists(),
+    enabled: !!uid,
+  });
+}
+
+export function useCreateReadingList() {
+  const qc = useQueryClient();
+  const uid = useUid();
+  return useMutation({
+    mutationFn: ({ name, publicSlug }: { name: string; publicSlug?: string }) =>
+      library.createReadingList(name, publicSlug),
+    onSuccess: () => {
+      toast.success("Reading list created");
+      qc.invalidateQueries({ queryKey: qk.readingLists(uid) });
+    },
+    onError: (error) => toast.error((error as Error).message),
   });
 }

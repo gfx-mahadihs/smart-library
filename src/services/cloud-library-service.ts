@@ -16,6 +16,13 @@ import type {
   ManagementAccess,
   Member,
   AuditEntry,
+  RenewLoanResult,
+  WaitlistEntry,
+  BookReview,
+  ReadingList,
+  ReadingStats,
+  LibraryNotice,
+  AdminReport,
 } from "@/types/library";
 
 const BOOK_SELECT =
@@ -23,6 +30,12 @@ const BOOK_SELECT =
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = any;
+
+const db = supabase as unknown as { from: (table: string) => Row };
+const rpc = supabase.rpc as unknown as (
+  name: string,
+  args?: Record<string, unknown>,
+) => Promise<{ data: unknown; error: { message: string } | null }>;
 
 function fail(error: { message: string } | null): asserts error is null {
   if (error) throw new Error(error.message);
@@ -150,11 +163,16 @@ export const cloudLibraryService: LibraryService = {
       .eq("id", 1)
       .single();
     fail(error);
+    const settings = data as Row;
     return {
-      loanDays: data.loan_days,
-      finePerDay: Number(data.fine_per_day),
-      maxActiveReservations: data.max_active_reservations,
-      currency: data.currency,
+      loanDays: settings.loan_days,
+      finePerDay: Number(settings.fine_per_day),
+      maxActiveReservations: settings.max_active_reservations,
+      currency: settings.currency,
+      maxRenewals: settings.max_renewals ?? 2,
+      renewDays: settings.renew_days ?? 7,
+      reservationHoldHours: settings.reservation_hold_hours ?? 48,
+      fineCapPerLoan: Number(settings.fine_cap_per_loan ?? 100),
     };
   },
 
@@ -166,17 +184,20 @@ export const cloudLibraryService: LibraryService = {
       .maybeSingle();
     fail(error);
     if (!data) return null;
+    const profile = data as Row;
     return {
-      id: data.id,
-      fullName: data.full_name,
-      email: data.email,
-      universityId: data.university_id,
-      department: data.department,
-      semester: data.semester,
-      avatarUrl: data.avatar_url,
-      language: data.language,
-      notifyEmail: data.notify_email,
-      notifyDueDates: data.notify_due_dates,
+      id: profile.id,
+      fullName: profile.full_name,
+      email: profile.email,
+      universityId: profile.university_id,
+      department: profile.department,
+      semester: profile.semester,
+      avatarUrl: profile.avatar_url,
+      language: profile.language,
+      notifyEmail: profile.notify_email,
+      notifyDueDates: profile.notify_due_dates,
+      onboardingComplete: profile.onboarding_complete ?? false,
+      textSize: profile.text_size ?? "normal",
     } satisfies Profile;
   },
 
@@ -191,6 +212,8 @@ export const cloudLibraryService: LibraryService = {
     if (p.language !== undefined) patch.language = p.language;
     if (p.notifyEmail !== undefined) patch.notify_email = p.notifyEmail;
     if (p.notifyDueDates !== undefined) patch.notify_due_dates = p.notifyDueDates;
+    if (p.onboardingComplete !== undefined) patch.onboarding_complete = p.onboardingComplete;
+    if (p.textSize !== undefined) patch.text_size = p.textSize;
     const { error } = await supabase.from("profiles").update(patch).eq("id", userId);
     fail(error);
   },
@@ -267,7 +290,7 @@ export const cloudLibraryService: LibraryService = {
     const { data, error } = await supabase
       .from("borrow_records")
       .select(
-        `id,borrowed_at,due_at,returned_at,status, copy:book_copies(barcode, book:books(${BOOK_SELECT}))`,
+        `id,borrowed_at,due_at,returned_at,status,renewal_count, copy:book_copies(barcode, book:books(${BOOK_SELECT}))`,
       )
       .eq("user_id", userId)
       .order("borrowed_at", { ascending: false });
@@ -282,6 +305,7 @@ export const cloudLibraryService: LibraryService = {
       status: r.status,
       barcode: r.copy.barcode,
       book: books[i],
+      renewalCount: r.renewal_count ?? 0,
     })) as BorrowRecord[];
   },
 
@@ -294,7 +318,7 @@ export const cloudLibraryService: LibraryService = {
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
     fail(error);
-    return (data ?? []).map((r: Row) => ({
+    return ((data ?? []) as Row[]).map((r: Row) => ({
       id: r.id,
       amount: Number(r.amount),
       overdueDays: r.overdue_days,
@@ -351,7 +375,7 @@ export const cloudLibraryService: LibraryService = {
       ? await supabase.from("profiles").select("id,full_name,email").in("id", ids)
       : { data: [] as Row[] };
     const pm = new Map((profs ?? []).map((p: Row) => [p.id, p]));
-    return (data ?? []).map((r: Row) => ({
+    return ((data ?? []) as Row[]).map((r: Row) => ({
       id: r.id,
       status: r.status,
       reservedAt: r.reserved_at,
@@ -488,6 +512,228 @@ export const cloudLibraryService: LibraryService = {
   },
   async saveAuthor(name) {
     const { error } = await supabase.from("authors").insert({ name: name.trim() });
+    fail(error);
+  },
+  async renewLoan(borrowId) {
+    const { data, error } = await rpc("renew_loan", { _borrow_id: borrowId });
+    fail(error);
+    const value = data as unknown as { due_at: string; renewal_count: number };
+    return { dueAt: value.due_at, renewalCount: value.renewal_count };
+  },
+  async joinWaitlist(bookId) {
+    const { data, error } = await rpc("join_waitlist", { _book_id: bookId });
+    fail(error);
+    const value = data as unknown as { position: number; status: WaitlistEntry["status"] };
+    return { id: "", position: value.position, status: value.status, holdExpiresAt: null };
+  },
+  async leaveWaitlist(bookId) {
+    const { error } = await rpc("leave_waitlist", { _book_id: bookId });
+    fail(error);
+  },
+  async listWaitlist(bookId) {
+    const { data, error } = await rpc("list_waitlist", { _book_id: bookId });
+    fail(error);
+    return ((data ?? []) as Row[]).map((r: Row) => ({
+      id: r.id,
+      position: r.position,
+      status: r.status,
+      holdExpiresAt: r.hold_expires_at,
+    }));
+  },
+  async saveReview(bookId, rating, body) {
+    const { data, error } = await rpc("save_book_review", {
+      _book_id: bookId,
+      _rating: rating,
+      _body: body,
+    });
+    fail(error);
+    return data as string;
+  },
+  async deleteReview(bookId) {
+    const { error } = await rpc("delete_book_review", { _book_id: bookId });
+    fail(error);
+  },
+  async listReviews(bookId) {
+    const { data, error } = await db
+      .from("book_reviews")
+      .select("id,book_id,user_id,rating,body,hidden,created_at,updated_at")
+      .eq("book_id", bookId)
+      .eq("hidden", false)
+      .order("created_at", { ascending: false });
+    fail(error);
+    return (data ?? []).map((r: Row) => ({
+      id: r.id,
+      bookId: r.book_id,
+      userId: r.user_id,
+      rating: r.rating,
+      body: r.body,
+      hidden: r.hidden,
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+    }));
+  },
+  async hideReview(reviewId, hidden) {
+    const { error } = await rpc("hide_book_review", {
+      _review_id: reviewId,
+      _hidden: hidden,
+    });
+    fail(error);
+  },
+  async recommendBooks(limit = 10) {
+    const { data, error } = await rpc("recommend_books", { _limit: limit });
+    fail(error);
+    const ids = (data ?? []) as string[];
+    if (!ids.length) return (await this.listBooks({ sort: "popular" })).slice(0, limit);
+    const { data: rows, error: rowsError } = await supabase
+      .from("books")
+      .select(BOOK_SELECT)
+      .in("id", ids);
+    fail(rowsError);
+    return withAvailability(rows ?? []);
+  },
+  async readingStats() {
+    const { data, error } = await rpc("member_reading_stats");
+    fail(error);
+    const value = data as unknown as {
+      books_read: number;
+      reading_streak: number;
+      badges: Array<{ key: ReadingStats["badges"][number]["key"]; earned: boolean }>;
+    };
+    return {
+      booksRead: value?.books_read ?? 0,
+      readingStreak: value?.reading_streak ?? 0,
+      badges: value?.badges ?? [],
+    };
+  },
+  async listReadingLists() {
+    const { data, error } = await db
+      .from("reading_lists")
+      .select("id,name,public_slug,created_at")
+      .order("created_at", { ascending: false });
+    fail(error);
+    if (!data?.length) return [];
+    const listIds = (data as Row[]).map((l: Row) => l.id);
+    const { data: items, error: itemError } = await db
+      .from("reading_list_items")
+      .select(`list_id,book:books(${BOOK_SELECT})`)
+      .in("list_id", listIds);
+    fail(itemError);
+    const map = new Map<string, Book[]>();
+    for (const item of (items as Row[] | null) ?? []) {
+      const rows = map.get(item.list_id) ?? [];
+      if (item.book) rows.push(item.book as unknown as Book);
+      map.set(item.list_id, rows);
+    }
+    return (data as Row[]).map((l: Row) => ({
+      id: l.id,
+      name: l.name,
+      publicSlug: l.public_slug,
+      createdAt: l.created_at,
+      books: map.get(l.id) ?? [],
+    }));
+  },
+  async createReadingList(name, publicSlug) {
+    const { data, error } = await db
+      .from("reading_lists")
+      .insert({ name: name.trim(), public_slug: publicSlug?.trim() || null })
+      .select("id")
+      .single();
+    fail(error);
+    return data.id;
+  },
+  async deleteReadingList(id) {
+    const { error } = await db.from("reading_lists").delete().eq("id", id);
+    fail(error);
+  },
+  async addBookToReadingList(listId, bookId) {
+    const { error } = await db
+      .from("reading_list_items")
+      .insert({ list_id: listId, book_id: bookId });
+    fail(error);
+  },
+  async removeBookFromReadingList(listId, bookId) {
+    const { error } = await db
+      .from("reading_list_items")
+      .delete()
+      .eq("list_id", listId)
+      .eq("book_id", bookId);
+    fail(error);
+  },
+  async listNotices() {
+    const { data, error } = await db
+      .from("library_notices")
+      .select("id,title,body,event_at,pinned,created_at")
+      .order("pinned", { ascending: false })
+      .order("created_at", { ascending: false });
+    fail(error);
+    return (data ?? []).map((n: Row) => ({
+      id: n.id,
+      title: n.title,
+      body: n.body,
+      eventAt: n.event_at,
+      pinned: n.pinned,
+      createdAt: n.created_at,
+    }));
+  },
+  async saveNotice(notice) {
+    const payload = {
+      title: notice.title.trim(),
+      body: notice.body.trim(),
+      event_at: notice.eventAt,
+      pinned: notice.pinned,
+    };
+    const { data, error } = notice.id
+      ? await db.from("library_notices").update(payload).eq("id", notice.id).select("id").single()
+      : await db.from("library_notices").insert(payload).select("id").single();
+    fail(error);
+    return data.id;
+  },
+  async deleteNotice(id) {
+    const { error } = await db.from("library_notices").delete().eq("id", id);
+    fail(error);
+  },
+  async adminReports(from, to) {
+    const { data, error } = await rpc("admin_reports", {
+      _from: from,
+      _to: to,
+    });
+    fail(error);
+    const value = data as unknown as {
+      most_borrowed: Array<{ title: string; borrow_count: number }>;
+      by_department: Array<{ department: string; borrow_count: number }>;
+      overdue: Array<{
+        id: string;
+        title: string;
+        full_name: string;
+        email: string;
+        due_at: string;
+      }>;
+      fines_collected: number;
+    };
+    return {
+      mostBorrowed: (value?.most_borrowed ?? []).map((r) => ({
+        title: r.title,
+        borrowCount: r.borrow_count,
+      })),
+      byDepartment: (value?.by_department ?? []).map((r) => ({
+        department: r.department,
+        borrowCount: r.borrow_count,
+      })),
+      overdue: (value?.overdue ?? []).map((r) => ({
+        id: r.id,
+        title: r.title,
+        fullName: r.full_name,
+        email: r.email,
+        dueAt: r.due_at,
+      })),
+      finesCollected: Number(value?.fines_collected ?? 0),
+    };
+  },
+  async waiveFine(fineId, reason) {
+    const { error } = await rpc("staff_waive_fine", {
+      _fine_id: fineId,
+      _reason: reason,
+    });
     fail(error);
   },
 };

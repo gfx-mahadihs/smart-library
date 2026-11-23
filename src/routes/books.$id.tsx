@@ -11,12 +11,19 @@ import {
   useReservations,
   useReserveBook,
   useToggleFavorite,
+  useJoinWaitlist,
+  useLeaveWaitlist,
+  useWaitlist,
+  useReviews,
+  useSaveReview,
+  useDeleteReview,
 } from "@/hooks/use-library";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { publicCatalogueQuery } from "@/services/public-catalogue";
 import { PublicLibraryLayout } from "@/components/layout/PublicLibraryLayout";
 import { useAuth } from "@/contexts/auth-context";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 export const Route = createFileRoute("/books/$id")({
   loader: async ({ context, params }) => {
@@ -76,6 +83,14 @@ function BookDetails() {
   const { data: reservations = [] } = useReservations();
   const toggle = useToggleFavorite();
   const reserve = useReserveBook();
+  const joinWaitlist = useJoinWaitlist();
+  const leaveWaitlist = useLeaveWaitlist();
+  const waitlist = useWaitlist(id);
+  const reviews = useReviews(id);
+  const saveReview = useSaveReview();
+  const deleteReview = useDeleteReview();
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewBody, setReviewBody] = useState("");
 
   if (!book) return <ErrorState message="This book could not be found." />;
 
@@ -84,6 +99,7 @@ function BookDetails() {
     (r) => r.book.id === book.id && ["pending", "approved", "ready_for_pickup"].includes(r.status),
   );
   const canReserve = book.availableCopies > 0 && !active;
+  const waitlistEntry = waitlist.data?.[0];
 
   const details: [string, string | number | null][] = [
     ["ISBN", book.isbn],
@@ -161,8 +177,18 @@ function BookDetails() {
                   variant="hero"
                   size="xl"
                   className="sm:w-auto"
-                  disabled={!canReserve || reserve.isPending}
-                  onClick={() => reserve.mutate(book.id)}
+                  disabled={
+                    (!canReserve && book.availableCopies > 0) ||
+                    reserve.isPending ||
+                    joinWaitlist.isPending
+                  }
+                  onClick={() =>
+                    book.availableCopies > 0
+                      ? reserve.mutate(book.id)
+                      : waitlistEntry
+                        ? leaveWaitlist.mutate(book.id)
+                        : joinWaitlist.mutate(book.id)
+                  }
                 >
                   {active
                     ? "Already reserved"
@@ -170,7 +196,11 @@ function BookDetails() {
                       ? reserve.isPending
                         ? "Reserving…"
                         : "Reserve Book"
-                      : "Unavailable to reserve"}
+                      : waitlistEntry
+                        ? `Leave waitlist · Position ${waitlistEntry.position}`
+                        : joinWaitlist.isPending
+                          ? "Joining…"
+                          : "Join waitlist"}
                 </Button>
                 <Button
                   variant="soft"
@@ -203,6 +233,80 @@ function BookDetails() {
                 </div>
               ))}
             </dl>
+            {user && (
+              <section className="mt-10" aria-labelledby="reviews-heading">
+                <h2 id="reviews-heading" className="title-lg">
+                  Reviews
+                </h2>
+                <form
+                  className="mt-4 rounded-3xl bg-card p-4 shadow-soft"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    saveReview.mutate({ bookId: id, rating: reviewRating, body: reviewBody });
+                  }}
+                >
+                  <label className="text-sm font-semibold" htmlFor="review-rating">
+                    Your rating
+                  </label>
+                  <select
+                    id="review-rating"
+                    value={reviewRating}
+                    onChange={(event) => setReviewRating(Number(event.target.value))}
+                    className="mt-2 h-11 w-full rounded-2xl border bg-background px-3 text-sm"
+                  >
+                    {[5, 4, 3, 2, 1].map((rating) => (
+                      <option key={rating} value={rating}>
+                        {rating} / 5
+                      </option>
+                    ))}
+                  </select>
+                  <label className="mt-3 block text-sm font-semibold" htmlFor="review-body">
+                    Review
+                  </label>
+                  <textarea
+                    id="review-body"
+                    value={reviewBody}
+                    onChange={(event) => setReviewBody(event.target.value)}
+                    maxLength={5000}
+                    className="mt-2 min-h-24 w-full rounded-2xl border bg-background p-3 text-sm"
+                  />
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button
+                      type="submit"
+                      variant="hero"
+                      size="pill"
+                      disabled={saveReview.isPending}
+                    >
+                      {saveReview.isPending ? "Saving…" : "Save review"}
+                    </Button>
+                    {reviews.data?.some((review) => review.userId === user.id) && (
+                      <Button
+                        type="button"
+                        variant="soft"
+                        size="pill"
+                        onClick={() => deleteReview.mutate(id)}
+                        disabled={deleteReview.isPending}
+                      >
+                        Delete
+                      </Button>
+                    )}
+                  </div>
+                </form>
+                <div className="mt-4 space-y-3">
+                  {(reviews.data ?? []).map((review) => (
+                    <article key={review.id} className="rounded-3xl bg-card p-4 shadow-soft">
+                      <p className="text-sm font-bold">{review.rating} / 5</p>
+                      {review.body && (
+                        <p className="mt-1 text-sm text-muted-foreground">{review.body}</p>
+                      )}
+                    </article>
+                  ))}
+                  {!reviews.isLoading && !reviews.data?.length && (
+                    <p className="text-sm text-muted-foreground">No reviews yet.</p>
+                  )}
+                </div>
+              </section>
+            )}
           </motion.div>
         </div>
       </Page>

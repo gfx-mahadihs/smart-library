@@ -18,6 +18,13 @@ import type {
   ReservationStatus,
   StaffFine,
   StaffReservation,
+  RenewLoanResult,
+  WaitlistEntry,
+  BookReview,
+  ReadingList,
+  ReadingStats,
+  LibraryNotice,
+  AdminReport,
 } from "@/types/library";
 import type { LibraryService } from "./library-service";
 
@@ -79,6 +86,10 @@ export const cppLibraryService: LibraryService = {
         finePerDay: 1.5,
         maxActiveReservations: 5,
         currency: "USD",
+        maxRenewals: 2,
+        renewDays: 7,
+        reservationHoldHours: 48,
+        fineCapPerLoan: 100,
       };
     }
   },
@@ -271,4 +282,120 @@ export const cppLibraryService: LibraryService = {
   async saveCategory(_name: string, _slug: string): Promise<void> {},
 
   async saveAuthor(_name: string): Promise<void> {},
+  async renewLoan(borrowId: string): Promise<RenewLoanResult> {
+    const res = await fetchJson<{ dueAt: string; renewalCount: number }>(
+      `/api/borrows/${encodeURIComponent(borrowId)}/renew`,
+      { method: "POST" },
+    );
+    return res;
+  },
+  async joinWaitlist(bookId: string): Promise<WaitlistEntry> {
+    try {
+      return await fetchJson<WaitlistEntry>("/api/waitlist", {
+        method: "POST",
+        body: JSON.stringify({ bookId }),
+      });
+    } catch {
+      return { id: "", position: 1, status: "waiting", holdExpiresAt: null };
+    }
+  },
+  async leaveWaitlist(bookId: string): Promise<void> {
+    await fetchJson(`/api/waitlist/${encodeURIComponent(bookId)}`, { method: "DELETE" }).catch(
+      () => undefined,
+    );
+  },
+  async listWaitlist(bookId: string): Promise<WaitlistEntry[]> {
+    try {
+      return await fetchJson<WaitlistEntry[]>(`/api/waitlist/${encodeURIComponent(bookId)}`);
+    } catch {
+      return [];
+    }
+  },
+  async saveReview(bookId: string, rating: number, body: string): Promise<string> {
+    const res = await fetchJson<{ id: string }>("/api/reviews", {
+      method: "POST",
+      body: JSON.stringify({ bookId, rating, body }),
+    });
+    return res.id;
+  },
+  async deleteReview(bookId: string): Promise<void> {
+    await fetchJson(`/api/reviews/${encodeURIComponent(bookId)}`, { method: "DELETE" });
+  },
+  async listReviews(bookId: string): Promise<BookReview[]> {
+    try {
+      return await fetchJson<BookReview[]>(`/api/reviews/${encodeURIComponent(bookId)}`);
+    } catch {
+      return [];
+    }
+  },
+  async hideReview(_reviewId: string, _hidden: boolean): Promise<void> {},
+  async recommendBooks(limit = 10): Promise<Book[]> {
+    const books = await this.listBooks({ sort: "popular" });
+    return books.slice(0, limit);
+  },
+  async readingStats(): Promise<ReadingStats> {
+    try {
+      return await fetchJson<ReadingStats>("/api/reading-stats");
+    } catch {
+      return { booksRead: 0, readingStreak: 0, badges: [] };
+    }
+  },
+  async listReadingLists(): Promise<ReadingList[]> {
+    try {
+      return await fetchJson<ReadingList[]>("/api/reading-lists");
+    } catch {
+      return [];
+    }
+  },
+  async createReadingList(name: string, publicSlug?: string): Promise<string> {
+    const res = await fetchJson<{ id: string }>("/api/reading-lists", {
+      method: "POST",
+      body: JSON.stringify({ name, publicSlug }),
+    });
+    return res.id;
+  },
+  async deleteReadingList(id: string): Promise<void> {
+    await fetchJson(`/api/reading-lists/${encodeURIComponent(id)}`, { method: "DELETE" });
+  },
+  async addBookToReadingList(listId: string, bookId: string): Promise<void> {
+    await fetchJson(`/api/reading-lists/${encodeURIComponent(listId)}/books`, {
+      method: "POST",
+      body: JSON.stringify({ bookId }),
+    });
+  },
+  async removeBookFromReadingList(listId: string, bookId: string): Promise<void> {
+    await fetchJson(
+      `/api/reading-lists/${encodeURIComponent(listId)}/books/${encodeURIComponent(bookId)}`,
+      { method: "DELETE" },
+    );
+  },
+  async listNotices(): Promise<LibraryNotice[]> {
+    try {
+      return await fetchJson<LibraryNotice[]>("/api/notices");
+    } catch {
+      return [];
+    }
+  },
+  async saveNotice(
+    notice: Omit<LibraryNotice, "id" | "createdAt"> & { id?: string },
+  ): Promise<string> {
+    const res = await fetchJson<{ id: string }>("/api/notices", {
+      method: notice.id ? "PUT" : "POST",
+      body: JSON.stringify(notice),
+    });
+    return res.id;
+  },
+  async deleteNotice(id: string): Promise<void> {
+    await fetchJson(`/api/notices/${encodeURIComponent(id)}`, { method: "DELETE" });
+  },
+  async adminReports(from: string, to: string): Promise<AdminReport> {
+    try {
+      return await fetchJson<AdminReport>(
+        `/api/admin/reports?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+      );
+    } catch {
+      return { mostBorrowed: [], byDepartment: [], overdue: [], finesCollected: 0 };
+    }
+  },
+  async waiveFine(_fineId: string, _reason: string): Promise<void> {},
 };

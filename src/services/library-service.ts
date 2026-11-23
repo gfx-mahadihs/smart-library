@@ -18,6 +18,13 @@ import type {
   BookEdit,
   Copy,
   AuditEntry,
+  RenewLoanResult,
+  WaitlistEntry,
+  BookReview,
+  ReadingList,
+  ReadingStats,
+  LibraryNotice,
+  AdminReport,
 } from "@/types/library";
 
 /**
@@ -72,4 +79,24 @@ export interface LibraryService {
   auditLog(): Promise<AuditEntry[]>;
   saveCategory(name: string, slug: string): Promise<void>;
   saveAuthor(name: string): Promise<void>;
+  renewLoan(borrowId: string): Promise<RenewLoanResult>;
+  joinWaitlist(bookId: string): Promise<WaitlistEntry>;
+  leaveWaitlist(bookId: string): Promise<void>;
+  listWaitlist(bookId: string): Promise<WaitlistEntry[]>;
+  saveReview(bookId: string, rating: number, body: string): Promise<string>;
+  deleteReview(bookId: string): Promise<void>;
+  listReviews(bookId: string): Promise<BookReview[]>;
+  hideReview(reviewId: string, hidden: boolean): Promise<void>;
+  recommendBooks(limit?: number): Promise<Book[]>;
+  readingStats(): Promise<ReadingStats>;
+  listReadingLists(): Promise<ReadingList[]>;
+  createReadingList(name: string, publicSlug?: string): Promise<string>;
+  deleteReadingList(id: string): Promise<void>;
+  addBookToReadingList(listId: string, bookId: string): Promise<void>;
+  removeBookFromReadingList(listId: string, bookId: string): Promise<void>;
+  listNotices(): Promise<LibraryNotice[]>;
+  saveNotice(notice: Omit<LibraryNotice, "id" | "createdAt"> & { id?: string }): Promise<string>;
+  deleteNotice(id: string): Promise<void>;
+  adminReports(from: string, to: string): Promise<AdminReport>;
+  waiveFine(fineId: string, reason: string): Promise<void>;
 }

@@ -6,7 +6,7 @@ import { DueBadge, ReservationBadge } from "./badges";
 import { daysUntil, dueState, formatDate } from "@/lib/due";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
-import { useCancelReservation, useSettings } from "@/hooks/use-library";
+import { useCancelReservation, useRenewLoan, useSettings } from "@/hooks/use-library";
 import { cn } from "@/lib/utils";
 
 const row = "flex gap-3 sm:gap-4 rounded-3xl bg-card p-3 sm:pr-4 shadow-soft";
@@ -56,6 +56,10 @@ export function ReservationCard({ r }: { r: Reservation }) {
 export function BorrowedBookCard({ b }: { b: BorrowRecord }) {
   const state = dueState(b.dueAt, b.returnedAt);
   const d = daysUntil(b.dueAt);
+  const renew = useRenewLoan();
+  const { data: settings } = useSettings();
+  const canRenew =
+    !b.returnedAt && state !== "overdue" && b.renewalCount < (settings?.maxRenewals ?? 2);
   return (
     <article className={cn(row, state === "overdue" && "ring-2 ring-destructive/30")}>
       <Link to="/books/$id" params={{ id: b.book.id }} className="w-16 shrink-0">
@@ -78,19 +82,34 @@ export function BorrowedBookCard({ b }: { b: BorrowRecord }) {
           </div>
         </div>
         {!b.returnedAt && (
-          <p
-            className={cn(
-              "mt-2 inline-flex items-center gap-1 text-xs font-bold",
-              d < 0 ? "text-destructive" : "text-primary",
+          <div className="mt-2 flex flex-wrap items-end justify-between gap-2">
+            <p
+              className={cn(
+                "inline-flex items-center gap-1 text-xs font-bold",
+                d < 0 ? "text-destructive" : "text-primary",
+              )}
+            >
+              <CalendarClock className="size-3.5" />
+              {d < 0
+                ? `${-d} day${d === -1 ? "" : "s"} overdue`
+                : d === 0
+                  ? "Due today"
+                  : `${d} day${d === 1 ? "" : "s"} left`}
+            </p>
+            {canRenew && (
+              <ConfirmDialog
+                title="Renew this loan?"
+                description={`Renew "${b.book.title}" for ${settings?.renewDays ?? 7} more days?`}
+                confirmLabel="Renew loan"
+                onConfirm={() => renew.mutate(b.id)}
+                trigger={
+                  <Button variant="link" size="sm" className="h-auto p-0 text-xs">
+                    Renew · {b.renewalCount}/{settings?.maxRenewals ?? 2}
+                  </Button>
+                }
+              />
             )}
-          >
-            <CalendarClock className="size-3.5" />
-            {d < 0
-              ? `${-d} day${d === -1 ? "" : "s"} overdue`
-              : d === 0
-                ? "Due today"
-                : `${d} day${d === 1 ? "" : "s"} left`}
-          </p>
+          </div>
         )}
       </div>
     </article>

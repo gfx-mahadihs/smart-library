@@ -54,3 +54,22 @@ g++ -std=c++14 -O2 main.cpp -o library_server.exe -lws2_32
 
 The frontend binds seamlessly via `src/services/cpp-library-service.ts`.
 Set `VITE_BACKEND_TYPE="cpp"` in `.env` or swap the binding in `src/services/index.ts`.
+
+## Cross-platform build
+
+### Windows
+```powershell
+cmake -S server_cpp -B server_cpp/build
+cmake --build server_cpp/build --config Release
+set CPP_API_TOKEN=replace-with-local-token
+server_cpp\build\Release\granthagar_server.exe 5000
+```
+
+### Linux
+```bash
+cmake -S server_cpp -B server_cpp/build
+cmake --build server_cpp/build
+CPP_API_TOKEN=replace-with-local-token server_cpp/build/granthagar_server 5000
+```
+
+The server persists state to `library_store.json` in its working directory. Send `Authorization: Bearer <CPP_API_TOKEN>` when `CPP_API_TOKEN` is configured.

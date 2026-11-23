@@ -33,3 +33,5 @@ dist-ssr
 *.sw?
 
 .vercel
+server_cpp/library_server.exe
+server_cpp/library_store.json

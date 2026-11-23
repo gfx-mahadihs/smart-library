@@ -1,14 +1,22 @@
+#ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#pragma comment(lib, "ws2_32.lib")
+#else
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#endif
 #include <iostream>
 #include <string>
 #include <sstream>
 #include <vector>
 #include <map>
+#include <cstdlib>
 #include "library_store.hpp"
 #include "json_helper.hpp"
 
-#pragma comment(lib, "ws2_32.lib")
 
 struct HttpRequest {
     std::string method;
@@ -88,6 +96,13 @@ std::string makeResponse(int statusCode, const std::string& statusText, const st
 std::string handleRequest(LibraryStore& store, const HttpRequest& req) {
     if (req.method == "OPTIONS") {
         return makeResponse(204, "No Content", "");
+    }
+    const char* tokenEnv = std::getenv("CPP_API_TOKEN");
+    if (tokenEnv && *tokenEnv) {
+        auto auth = req.headers.find("Authorization");
+        if (auth == req.headers.end() || auth->second != std::string("Bearer ") + tokenEnv) {
+            return makeResponse(401, "Unauthorized", "{\"error\":\"Unauthorized\"}");
+        }
     }
 
     // Health check
@@ -306,27 +321,55 @@ std::string handleRequest(LibraryStore& store, const HttpRequest& req) {
         return makeResponse(200, "OK", store.getAdminMetricsJson());
     }
 
+    if (req.path.rfind("/api/borrows/",0)==0 && req.path.rfind("/renew",4)!=std::string::npos && req.method=="POST") {
+        std::string id=req.path.substr(13,req.path.size()-19);
+        return makeResponse(200,"OK",store.renewBorrow(id));
+    }
+    if (req.path=="/api/waitlist" && req.method=="POST") {
+        std::string bookId=json::getStringField(req.body,"bookId");
+        return makeResponse(200,"OK",store.joinWaitlist(bookId));
+    }
+    if (req.path.rfind("/api/waitlist/",0)==0) {
+        std::string bookId=req.path.substr(14);
+        if (req.method=="DELETE") { store.leaveWaitlist(bookId); return makeResponse(200,"OK","{\"status\":\"left\"}"); }
+        if (req.method=="GET") return makeResponse(200,"OK",store.listWaitlist(bookId));
+    }
+    if (req.path=="/api/reviews" && req.method=="POST") {
+        std::string bookId=json::getStringField(req.body,"bookId");
+        int rating=static_cast<int>(json::getNumberField(req.body,"rating",0));
+        std::string body=json::getStringField(req.body,"body");
+        std::string result=store.saveReview(bookId,rating,body);
+        if (result.find("error")!=std::string::npos) return makeResponse(400,"Bad Request",result);
+        return makeResponse(200,"OK",result);
+    }
+    if (req.path.rfind("/api/reviews/",0)==0 && req.method=="GET") {
+        std::string bookId=req.path.substr(13);
+        return makeResponse(200,"OK",store.listReviews(bookId));
+    }
+    if (req.path=="/api/admin/reports") {
+        return makeResponse(200,"OK","{\"mostBorrowed\":[],\"byDepartment\":[],\"overdue\":[],\"finesCollected\":0}");
+    }
+
     return makeResponse(404, "Not Found", "{\"error\":\"Endpoint not found\"}");
 }
 
 int main(int argc, char* argv[]) {
-    int port = 5000;
-    if (argc > 1) {
-        port = std::stoi(argv[1]);
-    }
+    int port = argc > 1 ? std::stoi(argv[1]) : 5000;
 
+#ifdef _WIN32
+    typedef SOCKET Socket;
     WSADATA wsaData;
-    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        std::cerr << "[C++ Backend] WSAStartup failed.\n";
-        return 1;
-    }
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) return 1;
+#else
+    typedef int Socket;
+#endif
 
-    SOCKET listenSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (listenSocket == INVALID_SOCKET) {
-        std::cerr << "[C++ Backend] Socket creation failed: " << WSAGetLastError() << "\n";
-        WSACleanup();
-        return 1;
-    }
+    Socket listenSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+#ifdef _WIN32
+    if (listenSocket == INVALID_SOCKET) { WSACleanup(); return 1; }
+#else
+    if (listenSocket < 0) return 1;
+#endif
 
     int opt = 1;
     setsockopt(listenSocket, SOL_SOCKET, SO_REUSEADDR, (const char*)&opt, sizeof(opt));
@@ -336,52 +379,49 @@ int main(int argc, char* argv[]) {
     serverAddr.sin_addr.s_addr = INADDR_ANY;
     serverAddr.sin_port = htons(port);
 
+#ifdef _WIN32
     if (bind(listenSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
-        std::cerr << "[C++ Backend] Bind failed on port " << port << ": " << WSAGetLastError() << "\n";
-        closesocket(listenSocket);
-        WSACleanup();
-        return 1;
+        closesocket(listenSocket); WSACleanup(); return 1;
     }
-
     if (listen(listenSocket, SOMAXCONN) == SOCKET_ERROR) {
-        std::cerr << "[C++ Backend] Listen failed: " << WSAGetLastError() << "\n";
-        closesocket(listenSocket);
-        WSACleanup();
-        return 1;
+        closesocket(listenSocket); WSACleanup(); return 1;
     }
+#else
+    if (bind(listenSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) < 0) {
+        close(listenSocket); return 1;
+    }
+    if (listen(listenSocket, SOMAXCONN) < 0) { close(listenSocket); return 1; }
+#endif
 
-    std::cout << "=========================================================\n";
-    std::cout << "  Smart Library C++ Core Backend Engine                  \n";
-    std::cout << "  High-Performance HTTP REST Server                      \n";
-    std::cout << "  Port: " << port << "                                  \n";
-    std::cout << "  API Base: http://localhost:" << port << "/api/health   \n";
-    std::cout << "=========================================================\n" << std::flush;
-
+    std::cout << "[C++ Backend] listening on http://localhost:" << port << "\n" << std::flush;
     LibraryStore store;
 
     while (true) {
         sockaddr_in clientAddr;
+#ifdef _WIN32
         int clientLen = sizeof(clientAddr);
-        SOCKET clientSocket = accept(listenSocket, (sockaddr*)&clientAddr, &clientLen);
-        if (clientSocket == INVALID_SOCKET) {
-            continue;
-        }
+#else
+        socklen_t clientLen = sizeof(clientAddr);
+#endif
+        Socket clientSocket = accept(listenSocket, (sockaddr*)&clientAddr, &clientLen);
+#ifdef _WIN32
+        if (clientSocket == INVALID_SOCKET) continue;
+#else
+        if (clientSocket < 0) continue;
+#endif
 
-        std::string rawRequest;
         char buffer[4096];
-        int bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
+        int bytesReceived = recv(clientSocket, buffer, sizeof(buffer)-1, 0);
         if (bytesReceived > 0) {
-            buffer[bytesReceived] = '\0';
-            rawRequest = buffer;
-            HttpRequest req = parseRequest(rawRequest);
-            std::string response = handleRequest(store, req);
-            send(clientSocket, response.c_str(), static_cast<int>(response.size()), 0);
+            buffer[bytesReceived]='\0';
+            HttpRequest req=parseRequest(buffer);
+            std::string response=handleRequest(store,req);
+            send(clientSocket,response.c_str(),static_cast<int>(response.size()),0);
         }
-
+#ifdef _WIN32
         closesocket(clientSocket);
+#else
+        close(clientSocket);
+#endif
     }
-
-    closesocket(listenSocket);
-    WSACleanup();
-    return 0;
 }

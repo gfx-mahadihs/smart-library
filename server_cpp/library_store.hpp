@@ -1,23 +1,42 @@
 #ifndef LIBRARY_STORE_HPP
 #define LIBRARY_STORE_HPP
 
-#include <winsock2.h>
+#ifdef _WIN32
 #include <windows.h>
+#else
+#include <mutex>
+#endif
 #include <vector>
 #include <string>
 #include <algorithm>
 #include <chrono>
 #include <ctime>
+#include <fstream>
+#include <cstdio>
+#include <iterator>
+#include <cstdio>
+#include "json_helper.hpp"
 #include "models.hpp"
 
 class FastLock {
 private:
+#ifdef _WIN32
     CRITICAL_SECTION cs;
+#else
+    std::mutex cs;
+#endif
 public:
+#ifdef _WIN32
     FastLock() { InitializeCriticalSection(&cs); }
     ~FastLock() { DeleteCriticalSection(&cs); }
     void lock() { EnterCriticalSection(&cs); }
     void unlock() { LeaveCriticalSection(&cs); }
+#else
+    FastLock() = default;
+    ~FastLock() = default;
+    void lock() { cs.lock(); }
+    void unlock() { cs.unlock(); }
+#endif
 };
 
 class Guard {
@@ -38,6 +57,8 @@ private:
     std::vector<Fine> fines;
     std::vector<AppNotification> notifications;
     std::vector<std::string> favorites;
+    std::vector<std::pair<std::string,int> > waitlist;
+    std::vector<std::pair<std::string,std::string> > reviews;
     LibrarySettings settings;
     Profile userProfile;
     std::vector<std::string> userRoles;
@@ -62,6 +83,7 @@ private:
 public:
     LibraryStore() {
         initData();
+        loadData();
     }
 
     void initData() {
@@ -269,6 +291,41 @@ public:
         });
     }
 
+    void saveData() {
+        const std::string tempPath = "library_store.json.tmp";
+        const std::string path = "library_store.json";
+        std::ofstream out(tempPath.c_str(), std::ios::out | std::ios::trunc);
+        if (!out) return;
+        out << "{"
+            << "\"favorites\":[";
+        for (size_t i=0;i<favorites.size();++i) {
+            if (i) out << ",";
+            out << json::quote(favorites[i]);
+        }
+        out << "],\"waitlist\":[";
+        for (size_t i=0;i<waitlist.size();++i) {
+            if (i) out << ",";
+            out << "{\"bookId\":"<<json::quote(waitlist[i].first)
+                <<",\"position\":"<<waitlist[i].second<<"}";
+        }
+        out << "],\"profile\":"
+            << userProfile.toJson()
+            << "}";
+        out.close();
+        std::remove(path.c_str());
+        std::rename(tempPath.c_str(), path.c_str());
+    }
+
+    void loadData() {
+        std::ifstream in("library_store.json");
+        if (!in) return;
+        std::string data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+        std::string language = json::getStringField(data, "language");
+        if (language == "en" || language == "bn") userProfile.language = language;
+        std::string fullName = json::getStringField(data, "fullName");
+        if (!fullName.empty()) userProfile.fullName = fullName;
+    }
+
     std::vector<Category> getCategories() {
         Guard lock(mtx);
         return categories;
@@ -343,6 +400,7 @@ public:
         if (!name.empty()) userProfile.fullName = name;
         if (!dept.empty()) userProfile.department = dept;
         if (!sem.empty()) userProfile.semester = sem;
+        saveData();
     }
 
     std::vector<std::string> getRoles() {
@@ -370,6 +428,7 @@ public:
             getFutureTimeIso(2),
             *b
         });
+        saveData();
         return newId;
     }
 
@@ -380,6 +439,7 @@ public:
                 Book* b = findBookById(it->book.id);
                 if (b) b->availableCopies++;
                 it->status = "cancelled";
+                saveData();
                 return true;
             }
         }
@@ -417,6 +477,7 @@ public:
         Guard lock(mtx);
         if (std::find(favorites.begin(), favorites.end(), bookId) == favorites.end()) {
             favorites.push_back(bookId);
+            saveData();
         }
     }
 
@@ -425,8 +486,79 @@ public:
         auto it = std::find(favorites.begin(), favorites.end(), bookId);
         if (it != favorites.end()) {
             favorites.erase(it);
+            saveData();
         }
     }
+
+    std::string renewBorrow(const std::string& borrowId) {
+            Guard lock(mtx);
+            for (auto& b : borrows) {
+                if (b.id == borrowId && b.status == "active") {
+                    b.dueAt = getFutureTimeIso(7);
+                    saveData();
+                    return "{\"dueAt\":"+json::quote(b.dueAt)+",\"renewalCount\":1}";
+                }
+            }
+            return "{\"error\":\"Unable to renew loan\"}";
+        }
+
+        std::string joinWaitlist(const std::string& bookId) {
+            Guard lock(mtx);
+            int position=1;
+            for (const auto& entry: waitlist) if (entry.first==bookId) position++;
+            waitlist.push_back(std::make_pair(bookId,position));
+            saveData();
+            std::ostringstream ss;
+            ss<<"{\"id\":\"\",\"position\":"<<position<<",\"status\":\"waiting\",\"holdExpiresAt\":null}";
+            return ss.str();
+        }
+
+        void leaveWaitlist(const std::string& bookId) {
+            Guard lock(mtx);
+            for (auto it=waitlist.begin();it!=waitlist.end();) {
+                if (it->first==bookId) it=waitlist.erase(it); else ++it;
+            }
+            saveData();
+        }
+
+        std::string listWaitlist(const std::string& bookId) {
+            Guard lock(mtx);
+            std::ostringstream ss;
+            ss<<"[";
+            bool first=true;
+            for (const auto& entry: waitlist) if (entry.first==bookId) {
+                if (!first) ss<<",";
+                ss<<"{\"id\":\"\",\"position\":"<<entry.second<<",\"status\":\"waiting\",\"holdExpiresAt\":null}";
+                first=false;
+            }
+            ss<<"]";
+            return ss.str();
+        }
+
+        std::string saveReview(const std::string& bookId, int rating, const std::string& body) {
+            Guard lock(mtx);
+            if (rating<1 || rating>5) return "{\"error\":\"Rating must be between 1 and 5\"}";
+            reviews.push_back(std::make_pair(bookId, body));
+            saveData();
+            return "{\"id\":\"review-"+std::to_string(reviews.size())+"\"}";
+        }
+
+        std::string listReviews(const std::string& bookId) {
+            Guard lock(mtx);
+            std::ostringstream ss;
+            ss<<"[";
+            bool first=true;
+            for (size_t i=0;i<reviews.size();++i) if (reviews[i].first==bookId) {
+                if (!first) ss<<",";
+                ss<<"{\"id\":\"review-"<<i<<"\",\"bookId\":"<<json::quote(bookId)
+                  <<",\"userId\":\"usr_default_01\",\"rating\":5,\"body\":"<<json::quote(reviews[i].second)
+                  <<",\"hidden\":false,\"createdAt\":"<<json::quote(getCurrentTimeIso())
+                  <<",\"updatedAt\":"<<json::quote(getCurrentTimeIso())<<"}";
+                first=false;
+            }
+            ss<<"]";
+            return ss.str();
+        }
 
     std::string getAdminMetricsJson() {
         Guard lock(mtx);

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { filterCatalogue } from "@/services/catalogue";
 import type { Book } from "@/types/library";
+import { fallbackPublicCatalogue } from "@/services/public-catalogue.functions";
 const base: Book = {
   id: "a",
   title: "Clean Code",
@@ -33,6 +34,11 @@ const second: Book = {
   createdAt: "2026-02-01",
 };
 describe("Public catalogue browsing", () => {
+  it("provides a usable catalogue fallback when the database schema is not installed", () => {
+    const fallback = fallbackPublicCatalogue();
+    expect(fallback.books.length).toBeGreaterThan(0);
+    expect(fallback.categories.length).toBeGreaterThan(0);
+  });
   it("shows every catalogue book without a filter", () =>
     expect(filterCatalogue([base, second], {})).toHaveLength(2));
   it.each(["Clean Code", "Robert Martin", "9780132350884", "craftsmanship"])(

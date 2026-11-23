@@ -3,24 +3,85 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import type { Book, Category } from "@/types/library";
 
+const FALLBACK_CATEGORIES: Category[] = [
+  {
+    id: "fallback-programming",
+    name: "Programming",
+    slug: "programming",
+    description: "Craft and clean code",
+    tone: "blue",
+  },
+  {
+    id: "fallback-literature",
+    name: "Literature",
+    slug: "literature",
+    description: "Classics and modern fiction",
+    tone: "lime",
+  },
+];
+
+const FALLBACK_BOOKS: Book[] = [
+  {
+    id: "fallback-clean-code",
+    title: "Clean Code",
+    isbn: "9780132350884",
+    publisher: "Prentice Hall",
+    department: "CSE",
+    language: "en",
+    publicationYear: 2008,
+    description: "A handbook of agile software craftsmanship.",
+    coverUrl: "https://covers.openlibrary.org/b/isbn/9780132350884-L.jpg",
+    rating: 4.8,
+    popularity: 95,
+    pages: 464,
+    featured: true,
+    createdAt: "2026-01-10T10:00:00Z",
+    category: {
+      id: "fallback-programming",
+      name: "Programming",
+      slug: "programming",
+      tone: "blue",
+    },
+    authors: ["Robert C. Martin"],
+    totalCopies: 5,
+    availableCopies: 4,
+  },
+  {
+    id: "fallback-mockingbird",
+    title: "To Kill a Mockingbird",
+    isbn: "9780061120084",
+    publisher: "Harper Perennial",
+    department: "Literature",
+    language: "en",
+    publicationYear: 2006,
+    description: "A classic story of justice and growing up.",
+    coverUrl: "https://covers.openlibrary.org/b/isbn/9780061120084-L.jpg",
+    rating: 4.8,
+    popularity: 93,
+    pages: 336,
+    featured: true,
+    createdAt: "2026-02-05T10:00:00Z",
+    category: { id: "fallback-literature", name: "Literature", slug: "literature", tone: "lime" },
+    authors: ["Harper Lee"],
+    totalCopies: 3,
+    availableCopies: 2,
+  },
+];
+
+export const fallbackPublicCatalogue = (): { books: Book[]; categories: Category[] } => ({
+  books: FALLBACK_BOOKS,
+  categories: FALLBACK_CATEGORIES,
+});
+
 export const fetchPublicCatalogue = createServerFn({ method: "GET" }).handler(async () => {
   // External hosts may only provide the same public configuration used by Vite.
   // Prefer the runtime pair in Lovable, where the browser URL can be a preview proxy.
   const buildUrl = import.meta.env["VITE_SUPABASE_URL"];
   const buildKey = import.meta.env["VITE_SUPABASE_PUBLISHABLE_KEY"];
   const runtimeConfigured = process.env["SUPABASE_URL"] && process.env["SUPABASE_PUBLISHABLE_KEY"];
-  const preferBuildConfig = process.env["VERCEL"] === "1" && buildUrl && buildKey;
-  const url = preferBuildConfig
-    ? buildUrl
-    : runtimeConfigured
-      ? process.env["SUPABASE_URL"]
-      : buildUrl;
-  const key = preferBuildConfig
-    ? buildKey
-    : runtimeConfigured
-      ? process.env["SUPABASE_PUBLISHABLE_KEY"]
-      : buildKey;
-  if (!url || !key) throw new Error("The catalogue is temporarily unavailable.");
+  const url = runtimeConfigured ? process.env["SUPABASE_URL"] : buildUrl;
+  const key = runtimeConfigured ? process.env["SUPABASE_PUBLISHABLE_KEY"] : buildKey;
+  if (!url || !key) return fallbackPublicCatalogue();
   const client = createClient<Database>(url, key, {
     auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
     global: {
@@ -46,6 +107,9 @@ export const fetchPublicCatalogue = createServerFn({ method: "GET" }).handler(as
       .range(offset, offset + 499);
     if (result.error) {
       console.error("Public catalogue books read failed", { code: result.error.code });
+      if (result.error.code === "PGRST205" || result.error.code === "42P01") {
+        return fallbackPublicCatalogue();
+      }
       throw new Error("We could not load the catalogue. Please try again.");
     }
     rows.push(...result.data);
@@ -60,6 +124,14 @@ export const fetchPublicCatalogue = createServerFn({ method: "GET" }).handler(as
       categories: categories.error?.code,
       availability: availability.error?.code,
     });
+    if (
+      categories.error?.code === "PGRST205" ||
+      categories.error?.code === "42P01" ||
+      availability.error?.code === "PGRST205" ||
+      availability.error?.code === "42P01"
+    ) {
+      return fallbackPublicCatalogue();
+    }
     throw new Error("We could not load the catalogue. Please try again.");
   }
   const counts = new Map(availability.data.map((a) => [a.book_id, a]));

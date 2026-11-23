@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
 import { showcaseCovers as c } from "@/lib/onboarding";
 
@@ -73,14 +73,12 @@ export function GoogleButton({ label = "Continue with Google" }: { label?: strin
       variant="soft"
       size="xl"
       onClick={async () => {
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: "google",
-          options: {
-            redirectTo: `${window.location.origin}/auth-callback`,
-            queryParams: { access_type: "offline", prompt: "consent" },
-          },
+        const result = await lovable.auth.signInWithOAuth("google", {
+          redirect_uri: `${window.location.origin}/auth-callback`,
         });
-        if (error) toast.error(error.message ?? "Google sign-in failed");
+        if (!result.redirected && result.error) {
+          toast.error(result.error.message ?? "Google sign-in failed");
+        }
       }}
     >
       <svg viewBox="0 0 24 24" className="!size-5" aria-hidden>

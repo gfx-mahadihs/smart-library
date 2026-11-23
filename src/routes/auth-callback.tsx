@@ -19,6 +19,7 @@ function AuthCallback() {
     const url = new URL(window.location.href);
     const recovery = url.searchParams.get("type") === "recovery";
     let cancelled = false;
+    let attempts = 0;
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled) return;
@@ -33,11 +34,12 @@ function AuthCallback() {
 
     const finish = async () => {
       if (cancelled) return;
+      attempts += 1;
       const { data, error } = await supabase.auth.getSession();
       if (cancelled) return;
       if (error || !data.session) {
         if (error) console.error("[auth-callback] session could not be restored:", error.message);
-        navigate({ to: "/login", replace: true });
+        if (attempts >= 3) navigate({ to: "/login", replace: true });
         return;
       }
       navigate({ to: recovery ? "/reset-password" : "/dashboard", replace: true });
@@ -45,10 +47,12 @@ function AuthCallback() {
 
     void finish();
     const fallback = window.setTimeout(() => void finish(), 2500);
+    const finalFallback = window.setTimeout(() => void finish(), 5000);
 
     return () => {
       cancelled = true;
       window.clearTimeout(fallback);
+      window.clearTimeout(finalFallback);
       sub.subscription.unsubscribe();
     };
   }, [navigate]);

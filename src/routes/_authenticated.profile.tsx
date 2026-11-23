@@ -3,12 +3,20 @@ import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { z } from "zod";
-import { CalendarClock, ChevronRight, Heart, Receipt, Settings, ShieldCheck } from "lucide-react";
+import {
+  CalendarClock,
+  ChevronRight,
+  Heart,
+  Receipt,
+  Settings,
+  ShieldCheck,
+  Library,
+} from "lucide-react";
 import { Page } from "@/components/layout/AppLayout";
 import { Field, inputCls } from "@/components/forms/AuthShell";
 import { Button } from "@/components/ui/button";
 import { ErrorState, LoadingSkeleton } from "@/components/shared/states";
-import { useProfile, useRoles, qk } from "@/hooks/use-library";
+import { useProfile, useRoles, useReadingStats, qk } from "@/hooks/use-library";
 import { library } from "@/services";
 import type { Profile } from "@/types/library";
 
@@ -79,6 +87,7 @@ export function ProfileCard({ profile, roles }: { profile: Profile; roles: strin
 function ProfilePage() {
   const { data: profile, isLoading, error } = useProfile();
   const { data: roles = [] } = useRoles();
+  const { data: readingStats } = useReadingStats();
   const qc = useQueryClient();
   const [form, setForm] = useState({
     fullName: "",
@@ -125,6 +134,7 @@ function ProfilePage() {
     { to: "/favorites", label: "Favorites", icon: Heart },
     { to: "/fines", label: "Fines", icon: Receipt },
     { to: "/settings", label: "Settings", icon: Settings },
+    { to: "/reading-lists", label: "Reading lists", icon: Library },
   ] as const;
 
   return (
@@ -132,6 +142,34 @@ function ProfilePage() {
       <div className="grid gap-8 lg:grid-cols-[360px_1fr]">
         <div className="space-y-4">
           <ProfileCard profile={profile} roles={roles} />
+          {readingStats && (
+            <section className="grid grid-cols-2 gap-3" aria-label="Reading achievements">
+              <div className="rounded-3xl bg-card p-4 text-center shadow-soft">
+                <p className="text-2xl font-extrabold">{readingStats.booksRead}</p>
+                <p className="text-xs text-muted-foreground">Books read</p>
+              </div>
+              <div className="rounded-3xl bg-card p-4 text-center shadow-soft">
+                <p className="text-2xl font-extrabold">{readingStats.readingStreak}</p>
+                <p className="text-xs text-muted-foreground">Reading activity days</p>
+              </div>
+              <div className="col-span-2 flex flex-wrap gap-2 rounded-3xl bg-card p-4 shadow-soft">
+                {readingStats.badges
+                  .filter((badge) => badge.earned)
+                  .map((badge) => (
+                    <span
+                      key={badge.key}
+                      className="rounded-full bg-lime px-3 py-1 text-xs font-bold text-lime-foreground"
+                    >
+                      {badge.key === "first_borrow"
+                        ? "First Borrow"
+                        : badge.key === "five_books"
+                          ? "5 Books"
+                          : "On-Time Returner"}
+                    </span>
+                  ))}
+              </div>
+            </section>
+          )}
           <nav className="overflow-hidden rounded-3xl bg-card shadow-soft">
             {links.map(({ to, label, icon: Icon }) => (
               <Link

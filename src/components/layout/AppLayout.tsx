@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { motion } from "motion/react";
 import { BottomNavigation, DesktopNavigation, UserHeader } from "@/components/navigation/nav";
 import { useRouterState } from "@tanstack/react-router";
+import { PWAInstallPrompt } from "@/components/shared/PWAInstallPrompt";
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const inManagement = useRouterState({ select: (s) => s.location.pathname.startsWith("/admin") });
@@ -14,6 +15,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         {children}
       </main>
       <BottomNavigation />
+      <PWAInstallPrompt />
     </div>
   );
 }

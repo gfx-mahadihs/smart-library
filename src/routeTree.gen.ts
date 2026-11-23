@@ -25,8 +25,10 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedDueDatesRouteImport } from './routes/_authenticated.due-dates'
 import { Route as AuthenticatedFavoritesRouteImport } from './routes/_authenticated.favorites'
 import { Route as AuthenticatedFinesRouteImport } from './routes/_authenticated.fines'
+import { Route as AuthenticatedNoticesRouteImport } from './routes/_authenticated.notices'
 import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated.notifications'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated.profile'
+import { Route as AuthenticatedReadingListsRouteImport } from './routes/_authenticated.reading-lists'
 import { Route as AuthenticatedReservationsRouteImport } from './routes/_authenticated.reservations'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated.settings'
 import { Route as BooksIdRouteImport } from './routes/books.$id'
@@ -34,6 +36,8 @@ import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminAuthorsRouteImport } from './routes/_authenticated.admin.authors'
 import { Route as AuthenticatedAdminCategoriesRouteImport } from './routes/_authenticated.admin.categories'
 import { Route as AuthenticatedAdminCirculationRouteImport } from './routes/_authenticated.admin.circulation'
+import { Route as AuthenticatedAdminNoticesRouteImport } from './routes/_authenticated.admin.notices'
+import { Route as AuthenticatedAdminReportsRouteImport } from './routes/_authenticated.admin.reports'
 import { Route as AuthenticatedAdminSuperAdminRouteImport } from './routes/_authenticated.admin.super-admin'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated.admin.users'
 import { Route as AuthenticatedMyLibraryIndexRouteImport } from './routes/_authenticated.my-library.index'
@@ -123,6 +127,11 @@ const AuthenticatedFinesRoute = AuthenticatedFinesRouteImport.update({
   path: '/fines',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedNoticesRoute = AuthenticatedNoticesRouteImport.update({
+  id: '/notices',
+  path: '/notices',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedNotificationsRoute =
   AuthenticatedNotificationsRouteImport.update({
     id: '/notifications',
@@ -134,6 +143,12 @@ const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedReadingListsRoute =
+  AuthenticatedReadingListsRouteImport.update({
+    id: '/reading-lists',
+    path: '/reading-lists',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedReservationsRoute =
   AuthenticatedReservationsRouteImport.update({
     id: '/reservations',
@@ -171,6 +186,18 @@ const AuthenticatedAdminCirculationRoute =
   AuthenticatedAdminCirculationRouteImport.update({
     id: '/circulation',
     path: '/circulation',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminNoticesRoute =
+  AuthenticatedAdminNoticesRouteImport.update({
+    id: '/notices',
+    path: '/notices',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminReportsRoute =
+  AuthenticatedAdminReportsRouteImport.update({
+    id: '/reports',
+    path: '/reports',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedAdminSuperAdminRoute =
@@ -243,14 +270,18 @@ export interface FileRoutesByFullPath {
   '/due-dates': typeof AuthenticatedDueDatesRoute
   '/favorites': typeof AuthenticatedFavoritesRoute
   '/fines': typeof AuthenticatedFinesRoute
+  '/notices': typeof AuthenticatedNoticesRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/reading-lists': typeof AuthenticatedReadingListsRoute
   '/reservations': typeof AuthenticatedReservationsRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/books/$id': typeof BooksIdRoute
   '/admin/authors': typeof AuthenticatedAdminAuthorsRoute
   '/admin/categories': typeof AuthenticatedAdminCategoriesRoute
   '/admin/circulation': typeof AuthenticatedAdminCirculationRoute
+  '/admin/notices': typeof AuthenticatedAdminNoticesRoute
+  '/admin/reports': typeof AuthenticatedAdminReportsRoute
   '/admin/super-admin': typeof AuthenticatedAdminSuperAdminRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/my-library/borrowed': typeof AuthenticatedMyLibraryBorrowedRoute
@@ -277,14 +308,18 @@ export interface FileRoutesByTo {
   '/due-dates': typeof AuthenticatedDueDatesRoute
   '/favorites': typeof AuthenticatedFavoritesRoute
   '/fines': typeof AuthenticatedFinesRoute
+  '/notices': typeof AuthenticatedNoticesRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/reading-lists': typeof AuthenticatedReadingListsRoute
   '/reservations': typeof AuthenticatedReservationsRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/books/$id': typeof BooksIdRoute
   '/admin/authors': typeof AuthenticatedAdminAuthorsRoute
   '/admin/categories': typeof AuthenticatedAdminCategoriesRoute
   '/admin/circulation': typeof AuthenticatedAdminCirculationRoute
+  '/admin/notices': typeof AuthenticatedAdminNoticesRoute
+  '/admin/reports': typeof AuthenticatedAdminReportsRoute
   '/admin/super-admin': typeof AuthenticatedAdminSuperAdminRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/my-library/borrowed': typeof AuthenticatedMyLibraryBorrowedRoute
@@ -314,14 +349,18 @@ export interface FileRoutesById {
   '/_authenticated/due-dates': typeof AuthenticatedDueDatesRoute
   '/_authenticated/favorites': typeof AuthenticatedFavoritesRoute
   '/_authenticated/fines': typeof AuthenticatedFinesRoute
+  '/_authenticated/notices': typeof AuthenticatedNoticesRoute
   '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/_authenticated/reading-lists': typeof AuthenticatedReadingListsRoute
   '/_authenticated/reservations': typeof AuthenticatedReservationsRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/books/$id': typeof BooksIdRoute
   '/_authenticated/admin/authors': typeof AuthenticatedAdminAuthorsRoute
   '/_authenticated/admin/categories': typeof AuthenticatedAdminCategoriesRoute
   '/_authenticated/admin/circulation': typeof AuthenticatedAdminCirculationRoute
+  '/_authenticated/admin/notices': typeof AuthenticatedAdminNoticesRoute
+  '/_authenticated/admin/reports': typeof AuthenticatedAdminReportsRoute
   '/_authenticated/admin/super-admin': typeof AuthenticatedAdminSuperAdminRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/my-library/borrowed': typeof AuthenticatedMyLibraryBorrowedRoute
@@ -351,14 +390,18 @@ export interface FileRouteTypes {
     | '/due-dates'
     | '/favorites'
     | '/fines'
+    | '/notices'
     | '/notifications'
     | '/profile'
+    | '/reading-lists'
     | '/reservations'
     | '/settings'
     | '/books/$id'
     | '/admin/authors'
     | '/admin/categories'
     | '/admin/circulation'
+    | '/admin/notices'
+    | '/admin/reports'
     | '/admin/super-admin'
     | '/admin/users'
     | '/my-library/borrowed'
@@ -385,14 +428,18 @@ export interface FileRouteTypes {
     | '/due-dates'
     | '/favorites'
     | '/fines'
+    | '/notices'
     | '/notifications'
     | '/profile'
+    | '/reading-lists'
     | '/reservations'
     | '/settings'
     | '/books/$id'
     | '/admin/authors'
     | '/admin/categories'
     | '/admin/circulation'
+    | '/admin/notices'
+    | '/admin/reports'
     | '/admin/super-admin'
     | '/admin/users'
     | '/my-library/borrowed'
@@ -421,14 +468,18 @@ export interface FileRouteTypes {
     | '/_authenticated/due-dates'
     | '/_authenticated/favorites'
     | '/_authenticated/fines'
+    | '/_authenticated/notices'
     | '/_authenticated/notifications'
     | '/_authenticated/profile'
+    | '/_authenticated/reading-lists'
     | '/_authenticated/reservations'
     | '/_authenticated/settings'
     | '/books/$id'
     | '/_authenticated/admin/authors'
     | '/_authenticated/admin/categories'
     | '/_authenticated/admin/circulation'
+    | '/_authenticated/admin/notices'
+    | '/_authenticated/admin/reports'
     | '/_authenticated/admin/super-admin'
     | '/_authenticated/admin/users'
     | '/_authenticated/my-library/borrowed'
@@ -570,6 +621,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFinesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/notices': {
+      id: '/_authenticated/notices'
+      path: '/notices'
+      fullPath: '/notices'
+      preLoaderRoute: typeof AuthenticatedNoticesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/notifications': {
       id: '/_authenticated/notifications'
       path: '/notifications'
@@ -582,6 +640,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof AuthenticatedProfileRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/reading-lists': {
+      id: '/_authenticated/reading-lists'
+      path: '/reading-lists'
+      fullPath: '/reading-lists'
+      preLoaderRoute: typeof AuthenticatedReadingListsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/reservations': {
@@ -631,6 +696,20 @@ declare module '@tanstack/react-router' {
       path: '/circulation'
       fullPath: '/admin/circulation'
       preLoaderRoute: typeof AuthenticatedAdminCirculationRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/notices': {
+      id: '/_authenticated/admin/notices'
+      path: '/notices'
+      fullPath: '/admin/notices'
+      preLoaderRoute: typeof AuthenticatedAdminNoticesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/reports': {
+      id: '/_authenticated/admin/reports'
+      path: '/reports'
+      fullPath: '/admin/reports'
+      preLoaderRoute: typeof AuthenticatedAdminReportsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/super-admin': {
@@ -703,6 +782,8 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminAuthorsRoute: typeof AuthenticatedAdminAuthorsRoute
   AuthenticatedAdminCategoriesRoute: typeof AuthenticatedAdminCategoriesRoute
   AuthenticatedAdminCirculationRoute: typeof AuthenticatedAdminCirculationRoute
+  AuthenticatedAdminNoticesRoute: typeof AuthenticatedAdminNoticesRoute
+  AuthenticatedAdminReportsRoute: typeof AuthenticatedAdminReportsRoute
   AuthenticatedAdminSuperAdminRoute: typeof AuthenticatedAdminSuperAdminRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
@@ -715,6 +796,8 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminAuthorsRoute: AuthenticatedAdminAuthorsRoute,
   AuthenticatedAdminCategoriesRoute: AuthenticatedAdminCategoriesRoute,
   AuthenticatedAdminCirculationRoute: AuthenticatedAdminCirculationRoute,
+  AuthenticatedAdminNoticesRoute: AuthenticatedAdminNoticesRoute,
+  AuthenticatedAdminReportsRoute: AuthenticatedAdminReportsRoute,
   AuthenticatedAdminSuperAdminRoute: AuthenticatedAdminSuperAdminRoute,
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
@@ -732,8 +815,10 @@ interface AuthenticatedRouteChildren {
   AuthenticatedDueDatesRoute: typeof AuthenticatedDueDatesRoute
   AuthenticatedFavoritesRoute: typeof AuthenticatedFavoritesRoute
   AuthenticatedFinesRoute: typeof AuthenticatedFinesRoute
+  AuthenticatedNoticesRoute: typeof AuthenticatedNoticesRoute
   AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedReadingListsRoute: typeof AuthenticatedReadingListsRoute
   AuthenticatedReservationsRoute: typeof AuthenticatedReservationsRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedMyLibraryBorrowedRoute: typeof AuthenticatedMyLibraryBorrowedRoute
@@ -748,8 +833,10 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDueDatesRoute: AuthenticatedDueDatesRoute,
   AuthenticatedFavoritesRoute: AuthenticatedFavoritesRoute,
   AuthenticatedFinesRoute: AuthenticatedFinesRoute,
+  AuthenticatedNoticesRoute: AuthenticatedNoticesRoute,
   AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedReadingListsRoute: AuthenticatedReadingListsRoute,
   AuthenticatedReservationsRoute: AuthenticatedReservationsRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedMyLibraryBorrowedRoute: AuthenticatedMyLibraryBorrowedRoute,

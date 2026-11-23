@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import zlib from "node:zlib";
 
 // 1. Generate crisp SVG favicon
 const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
@@ -137,3 +138,56 @@ function generateIco32() {
 }
 
 generateIco32();
+
+function writePng(size, filename) {
+  const signature = Buffer.from([137,80,78,71,13,10,26,10]);
+  const chunk = (type, data) => {
+    const len = Buffer.alloc(4);
+    len.writeUInt32BE(data.length);
+    const name = Buffer.from(type);
+    const crc = Buffer.alloc(4);
+    const crcTable = globalThis.__pngCrc ??= (() => {
+      const table = [];
+      for (let n=0;n<256;n++) {
+        let c=n;
+        for (let k=0;k<8;k++) c=(c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+        table[n]=c >>> 0;
+      }
+      return table;
+    })();
+    let crcValue=0xffffffff;
+    for (const byte of Buffer.concat([name,data])) {
+      crcValue=crcTable[(crcValue ^ byte) & 0xff] ^ (crcValue >>> 8);
+    }
+    crc.writeUInt32BE((crcValue ^ 0xffffffff) >>> 0);
+    return Buffer.concat([len,name,data,crc]);
+  };
+  const ihdr=Buffer.alloc(13);
+  ihdr.writeUInt32BE(size,0);
+  ihdr.writeUInt32BE(size,4);
+  ihdr[8]=8; ihdr[9]=6;
+  const rows=[];
+  for (let y=0;y<size;y++) {
+    rows.push(Buffer.from([0]));
+    const row=Buffer.alloc(size*4);
+    for (let x=0;x<size;x++) {
+      const i=(x*4);
+      const margin=size*0.125;
+      const inside=x>=margin && x<=size-margin && y>=margin && y<=size-margin;
+      const dx=(x-size/2)/(size/2);
+      const dy=(y-size/2)/(size/2);
+      const onG=inside && Math.abs(dx)<=0.18 && dy>-0.42 && dy<0.42;
+      row[i]=onG?255:inside?2:248;
+      row[i+1]=onG?255:inside?81:250;
+      row[i+2]=onG?255:inside?176:252;
+      row[i+3]=255;
+    }
+    rows.push(row);
+  }
+  const png=Buffer.concat([signature,chunk("IHDR",ihdr),chunk("IDAT",zlib.deflateSync(Buffer.concat(rows))),chunk("IEND",Buffer.alloc(0))]);
+  fs.writeFileSync(filename,png);
+  console.log(`Wrote ${filename}`);
+}
+
+writePng(192,"public/icon-192.png");
+writePng(512,"public/icon-512.png");

@@ -13,6 +13,8 @@ import {
   useCategories,
   useProfile,
   useReservations,
+  useRecommendations,
+  useNotices,
 } from "@/hooks/use-library";
 import { daysUntil } from "@/lib/due";
 import { Button } from "@/components/ui/button";
@@ -47,10 +49,11 @@ function Dashboard() {
   const cats = useCategories();
   const borrows = useBorrows();
   const res = useReservations();
+  const recommendations = useRecommendations();
+  const notices = useNotices();
 
   const all = books.data ?? [];
   const featured = all.filter((b) => b.featured);
-  const recommended = [...all].sort((a, b) => b.rating - a.rating).slice(0, 6);
   const activeBorrows = (borrows.data ?? [])
     .filter((b) => !b.returnedAt)
     .sort((a, b) => +new Date(a.dueAt) - +new Date(b.dueAt));
@@ -65,6 +68,20 @@ function Dashboard() {
         <p className="text-sm text-muted-foreground">Welcome back,</p>
         <h1 className="title-lg sm:text-4xl">{firstName || "Reader"}</h1>
       </header>
+
+      {(notices.data ?? []).some((notice) => notice.pinned) && (
+        <section className="mb-8 space-y-3" aria-label="Pinned library notices">
+          {(notices.data ?? [])
+            .filter((notice) => notice.pinned)
+            .slice(0, 3)
+            .map((notice) => (
+              <article key={notice.id} className="rounded-3xl bg-primary-soft p-4">
+                <h2 className="text-sm font-extrabold">{notice.title}</h2>
+                <p className="mt-1 text-sm text-muted-foreground">{notice.body}</p>
+              </article>
+            ))}
+        </section>
+      )}
 
       {activeBorrows[0] && (
         <Link
@@ -130,12 +147,17 @@ function Dashboard() {
 
       <section className="mb-12">
         <SectionHeader title="Recommended for You" action={seeAll("/explore")} />
-        {books.isLoading ? (
+        {recommendations.isLoading ? (
           <LoadingSkeleton />
         ) : (
           <div className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-6">
-            {recommended.map((b) => (
-              <BookCard key={b.id} book={b} />
+            {(recommendations.data ?? all.slice(0, 6)).map((b) => (
+              <div key={b.id}>
+                <BookCard book={b} />
+                <p className="mt-1 text-[11px] font-semibold text-muted-foreground">
+                  Because you read or save similar books
+                </p>
+              </div>
             ))}
           </div>
         )}
